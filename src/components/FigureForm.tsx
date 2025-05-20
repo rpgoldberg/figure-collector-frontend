@@ -61,13 +61,13 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     }
   };
 
-  const validateUrl = (value: string) => {
+  const validateUrl = (value: string | undefined) => {
     if (!value) return true;
     
     try {
       new URL(value);
       return true;
-    } catch (e: any) {
+    } catch (e) {
       return 'Please enter a valid URL';
     }
   };

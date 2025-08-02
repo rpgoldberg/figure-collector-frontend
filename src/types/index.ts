@@ -11,9 +11,9 @@ export interface Figure {
   manufacturer: string;
   name: string;
   scale: string;
-  mfcLink: string;
-  location: string;
-  boxNumber: string;
+  mfcLink?: string;
+  location?: string;
+  boxNumber?: string;
   imageUrl?: string;
   userId: string;
   createdAt: string;
@@ -24,9 +24,9 @@ export interface FigureFormData {
   manufacturer: string;
   name: string;
   scale: string;
-  mfcLink: string;
-  location: string;
-  boxNumber: string;
+  mfcLink?: string; 
+  location?: string; 
+  boxNumber?: string; 
   imageUrl?: string;
 }
 

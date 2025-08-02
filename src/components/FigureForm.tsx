@@ -35,6 +35,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     formState: { errors },
     setValue,
     watch,
+    getValues,
   } = useForm<FigureFormData>({
     defaultValues: initialData || {
       manufacturer: '',

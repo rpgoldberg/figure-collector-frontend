@@ -129,7 +129,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 </Tooltip>
               </FormLabel>
               <Input
-                {...register('scale', { required: 'Scale is required' })}
+                {...register('scale')} //optional
                 placeholder="e.g., 1/8, 1/7, Nendoroid"
                 onBlur={handleScaleBlur}
               />
@@ -170,7 +170,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
             <FormControl isInvalid={!!errors.location}>
               <FormLabel>Storage Location</FormLabel>
               <Input
-                {...register('location', { required: 'Location is required' })}
+                {...register('location')} //optional
                 placeholder="e.g., Shelf, Display Case, Storage Room"
               />
               <FormErrorMessage>{errors.location?.message}</FormErrorMessage>
@@ -181,7 +181,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
             <FormControl isInvalid={!!errors.boxNumber}>
               <FormLabel>Box Number/ID</FormLabel>
               <Input
-                {...register('boxNumber', { required: 'Box number is required' })}
+                {...register('boxNumber')} //optional
                 placeholder="e.g., A1, Box 3"
               />
               <FormErrorMessage>{errors.boxNumber?.message}</FormErrorMessage>

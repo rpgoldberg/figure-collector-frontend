@@ -1,4 +1,4 @@
-import React from 'react';
+import React, useState from 'react';
 import {
   Box,
   Button,
@@ -27,6 +27,7 @@ interface FigureFormProps {
 }
 
 const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoading }) => {
+  const [isScrapingMFC, setIsScrapingMFC] = useState(false);
   const {
     register,
     handleSubmit,
@@ -88,6 +89,67 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     setValue('scale', formattedScale);
   };
 
+  // Function to scrape MFC data and populate fields
+  const handleMFCLinkBlur = async () => {
+    const currentMfcLink = getValues('mfcLink');
+
+    if (!currentMfcLink || !currentMfcLink.trim() || !currentMfcLink.includes('myfigurecollection.net')) {
+      return;
+    }
+
+    setIsScrapingMFC(true);
+
+    try {
+      const response = await fetch('/api/figures/scrape-mfc', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth setup
+        },
+        body: JSON.stringify({ mfcLink: currentMfcLink })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const scrapedData = result.data;
+
+        // Only populate empty fields
+        if (!getValues('imageUrl') && scrapedData.imageUrl) {
+          setValue('imageUrl', scrapedData.imageUrl);
+        }
+        if (!getValues('manufacturer') && scrapedData.manufacturer) {
+          setValue('manufacturer', scrapedData.manufacturer);
+        }
+        if (!getValues('name') && scrapedData.name) {
+          setValue('name', scrapedData.name);
+        }
+        if (!getValues('scale') && scrapedData.scale) {
+          setValue('scale', scrapedData.scale);
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Auto-populated fields from MFC!',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error scraping MFC data:', error);
+      toast({
+        title: 'Warning',
+        description: 'Could not auto-populate from MFC link',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsScrapingMFC(false);
+    }
+  };
+
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>
       <VStack spacing={6} align="stretch">
@@ -143,25 +205,29 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
               <InputGroup>
                 <Input
                   {...register('mfcLink', {
-                    required: 'MFC link is required',
                     validate: validateUrl,
                   })}
                   placeholder="https://myfigurecollection.net/item/..."
+		  onBlur={handleMFCLinkBlur} // Add blur handler
                 />
                 <InputRightElement>
-                  <IconButton
-                    aria-label="Open MFC link"
-                    icon={<FaLink />}
-                    size="sm"
-                    variant="ghost"
-                    onClick={openMfcLink}
-                    isDisabled={!mfcLink}
-                  />
+		  {isScrapingMFC ? (
+                    <Spinner size="sm" />
+		  ) : (
+                    <IconButton
+                      aria-label="Open MFC link"
+                      icon={<FaLink />}
+                      size="sm"
+                      variant="ghost"
+                      onClick={openMfcLink}
+                      isDisabled={!mfcLink}
+                    />
+		  )}
                 </InputRightElement>
               </InputGroup>
               <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
               <Text fontSize="xs" color="gray.500" mt={1}>
-                Used to automatically fetch the figure's image
+                Auto-populates empty fields when you paste an MFC link
               </Text>
             </FormControl>
           </GridItem>

@@ -94,60 +94,123 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   // Function to scrape MFC data and populate fields
   const handleMFCLinkBlur = async () => {
     const currentMfcLink = getValues('mfcLink');
+    console.log('[FRONTEND] MFC link blur triggered with:', currentMfcLink);
 
-    if (!currentMfcLink || !currentMfcLink.trim() || !currentMfcLink.includes('myfigurecollection.net')) {
+    if (!currentMfcLink || !currentMfcLink.trim()) {
+      console.log('[FRONTEND] No MFC link provided, skipping scrape');
       return;
     }
 
+    if (!currentMfcLink.includes('myfigurecollection.net')) {
+      console.log('[FRONTEND] Not an MFC link, skipping scrape');
+      return;
+    }
+
+    console.log('[FRONTEND] Starting MFC scraping process...');
     setIsScrapingMFC(true);
 
     try {
+      const token = localStorage.getItem('token');
+      console.log('[FRONTEND] Auth token present:', !!token);
+      
+      const requestBody = { mfcLink: currentMfcLink };
+      console.log('[FRONTEND] Making request to /api/figures/scrape-mfc with body:', requestBody);
+
       const response = await fetch('/api/figures/scrape-mfc', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth setup
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ mfcLink: currentMfcLink })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('[FRONTEND] Response status:', response.status);
+      console.log('[FRONTEND] Response headers:', Object.fromEntries(response.headers.entries()));
+
       const result = await response.json();
+      console.log('[FRONTEND] Response data:', result);
+
+      if (!response.ok) {
+        console.error('[FRONTEND] Response not ok:', response.status, result);
+        toast({
+          title: 'Error',
+          description: result.message || 'Failed to scrape MFC data',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
 
       if (result.success && result.data) {
         const scrapedData = result.data;
+        console.log('[FRONTEND] Processing scraped data:', scrapedData);
+
+        let fieldsPopulated = 0;
 
         // Only populate empty fields
         if (!getValues('imageUrl') && scrapedData.imageUrl) {
           setValue('imageUrl', scrapedData.imageUrl);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set imageUrl:', scrapedData.imageUrl);
         }
         if (!getValues('manufacturer') && scrapedData.manufacturer) {
           setValue('manufacturer', scrapedData.manufacturer);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set manufacturer:', scrapedData.manufacturer);
         }
         if (!getValues('name') && scrapedData.name) {
           setValue('name', scrapedData.name);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set name:', scrapedData.name);
         }
         if (!getValues('scale') && scrapedData.scale) {
           setValue('scale', scrapedData.scale);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set scale:', scrapedData.scale);
         }
 
+        console.log(`[FRONTEND] Populated ${fieldsPopulated} fields from MFC data`);
+
+        if (fieldsPopulated > 0) {
+          toast({
+            title: 'Success',
+            description: `Auto-populated ${fieldsPopulated} fields from MFC!`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+        } else {
+          toast({
+            title: 'Info',
+            description: 'No new data found to populate (fields may already be filled)',
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+        }
+      } else {
+        console.log('[FRONTEND] No valid data in response:', result);
         toast({
-          title: 'Success',
-          description: 'Auto-populated fields from MFC!',
-          status: 'success',
+          title: 'Warning',
+          description: 'No data could be extracted from MFC link',
+          status: 'warning',
           duration: 3000,
           isClosable: true,
         });
       }
     } catch (error) {
-      console.error('Error scraping MFC data:', error);
+      console.error('[FRONTEND] Error scraping MFC data:', error);
       toast({
-        title: 'Warning',
-        description: 'Could not auto-populate from MFC link',
-        status: 'warning',
-        duration: 3000,
+        title: 'Error',
+        description: 'Network error while contacting server',
+        status: 'error',
+        duration: 5000,
         isClosable: true,
       });
     } finally {
+      console.log('[FRONTEND] MFC scraping process completed');
       setIsScrapingMFC(false);
     }
   };

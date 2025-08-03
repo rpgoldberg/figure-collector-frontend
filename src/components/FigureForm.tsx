@@ -53,27 +53,6 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   const imageUrl = watch('imageUrl');
   const previousMfcLink = useRef<string>('');
 
-  // Watch for MFC link changes and trigger scraping
-  useEffect(() => {
-    const currentMfcLink = mfcLink || '';
-    
-    // Only trigger if the link actually changed and it's not empty
-    if (currentMfcLink !== previousMfcLink.current && 
-        currentMfcLink.trim() && 
-        currentMfcLink.includes('myfigurecollection.net')) {
-      
-      console.log('[FRONTEND] MFC link changed, triggering scrape');
-      // Add a small delay to simulate blur behavior
-      const timer = setTimeout(() => {
-        handleMFCLinkBlur();
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    previousMfcLink.current = currentMfcLink;
-  }, [mfcLink, handleMFCLinkBlur]);
-
   const openMfcLink = () => {
     if (mfcLink) {
       window.open(mfcLink, '_blank');
@@ -236,6 +215,27 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
       setIsScrapingMFC(false);
     }
   }, [getValues, setValue, toast]);
+
+  // Watch for MFC link changes and trigger scraping
+  useEffect(() => {
+    const currentMfcLink = mfcLink || '';
+    
+    // Only trigger if the link actually changed and it's not empty
+    if (currentMfcLink !== previousMfcLink.current && 
+        currentMfcLink.trim() && 
+        currentMfcLink.includes('myfigurecollection.net')) {
+      
+      console.log('[FRONTEND] MFC link changed, triggering scrape');
+      // Add a small delay to simulate blur behavior
+      const timer = setTimeout(() => {
+        handleMFCLinkBlur();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    previousMfcLink.current = currentMfcLink;
+  }, [mfcLink, handleMFCLinkBlur]);
 
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>

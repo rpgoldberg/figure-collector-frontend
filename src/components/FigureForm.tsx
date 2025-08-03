@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -51,6 +51,28 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   const toast = useToast();
   const mfcLink = watch('mfcLink');
   const imageUrl = watch('imageUrl');
+  const previousMfcLink = useRef<string>('');
+
+  // Watch for MFC link changes and trigger scraping
+  useEffect(() => {
+    const currentMfcLink = mfcLink || '';
+    
+    // Only trigger if the link actually changed and it's not empty
+    if (currentMfcLink !== previousMfcLink.current && 
+        currentMfcLink.trim() && 
+        currentMfcLink.includes('myfigurecollection.net')) {
+      
+      console.log('[FRONTEND] MFC link changed, triggering scrape');
+      // Add a small delay to simulate blur behavior
+      const timer = setTimeout(() => {
+        handleMFCLinkBlur();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    previousMfcLink.current = currentMfcLink;
+  }, [mfcLink, handleMFCLinkBlur]);
 
   const openMfcLink = () => {
     if (mfcLink) {
@@ -92,7 +114,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   };
 
   // Function to scrape MFC data and populate fields
-  const handleMFCLinkBlur = async () => {
+  const handleMFCLinkBlur = useCallback(async () => {
     const currentMfcLink = getValues('mfcLink');
     console.log('[FRONTEND] MFC link blur triggered with:', currentMfcLink);
 
@@ -213,7 +235,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
       console.log('[FRONTEND] MFC scraping process completed');
       setIsScrapingMFC(false);
     }
-  };
+  }, [getValues, setValue, toast]);
 
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>
@@ -270,8 +292,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
               <InputGroup>
                 <Input
                   {...register('mfcLink', {
-                    validate: validateUrl,
-                    onBlur: handleMFCLinkBlur
+                    validate: validateUrl
                   })}
                   placeholder="https://myfigurecollection.net/item/..."
                 />
@@ -292,7 +313,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
               </InputGroup>
               <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
               <Text fontSize="xs" color="gray.500" mt={1}>
-                Auto-populates empty fields when you paste an MFC link
+                Click the link icon to open MFC page, then manually copy data if auto-population fails
               </Text>
             </FormControl>
           </GridItem>

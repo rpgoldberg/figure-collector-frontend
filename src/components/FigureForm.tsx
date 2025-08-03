@@ -53,6 +53,9 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   const imageUrl = watch('imageUrl');
   const previousMfcLink = useRef<string>('');
 
+  // Debug: Log every render to see what's happening
+  console.log('[FRONTEND DEBUG] Component render, mfcLink:', mfcLink);
+
   const openMfcLink = () => {
     if (mfcLink) {
       window.open(mfcLink, '_blank');
@@ -147,6 +150,19 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
       if (result.success && result.data) {
         const scrapedData = result.data;
         console.log('[FRONTEND] Processing scraped data:', scrapedData);
+
+        // Check if we got a manual extraction indicator
+        if (scrapedData.imageUrl && scrapedData.imageUrl.startsWith('MANUAL_EXTRACT:')) {
+          console.log('[FRONTEND] Manual extraction required');
+          toast({
+            title: 'Auto-scraping blocked',
+            description: 'MFC has anti-bot protection. Click the link icon to open the page and manually copy the data.',
+            status: 'warning',
+            duration: 8000,
+            isClosable: true,
+          });
+          return;
+        }
 
         let fieldsPopulated = 0;
 

@@ -53,8 +53,8 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   const imageUrl = watch('imageUrl');
   const previousMfcLink = useRef<string>('');
 
-  // Debug: Log every render to see what's happening
-  console.log('[FRONTEND DEBUG] Component render, mfcLink:', mfcLink);
+  // Debug: Log every render to see what's happening (commented out to reduce noise)
+  // console.log('[FRONTEND DEBUG] Component render, mfcLink:', mfcLink);
 
   const openMfcLink = () => {
     if (mfcLink) {

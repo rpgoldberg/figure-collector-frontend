@@ -219,19 +219,25 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   // Watch for MFC link changes and trigger scraping
   useEffect(() => {
     const currentMfcLink = mfcLink || '';
+    console.log('[FRONTEND] useEffect triggered, current link:', currentMfcLink);
+    console.log('[FRONTEND] Previous link:', previousMfcLink.current);
     
     // Only trigger if the link actually changed and it's not empty
     if (currentMfcLink !== previousMfcLink.current && 
         currentMfcLink.trim() && 
         currentMfcLink.includes('myfigurecollection.net')) {
       
-      console.log('[FRONTEND] MFC link changed, triggering scrape');
-      // Add a small delay to simulate blur behavior
+      console.log('[FRONTEND] MFC link changed, triggering scrape in 1 second...');
+      // Add a delay to let user finish typing
       const timer = setTimeout(() => {
+        console.log('[FRONTEND] Executing delayed scrape');
         handleMFCLinkBlur();
-      }, 500);
+      }, 1000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        console.log('[FRONTEND] Cleaning up timer');
+        clearTimeout(timer);
+      };
     }
     
     previousMfcLink.current = currentMfcLink;

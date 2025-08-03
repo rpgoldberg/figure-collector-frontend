@@ -271,9 +271,9 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 <Input
                   {...register('mfcLink', {
                     validate: validateUrl,
+                    onBlur: handleMFCLinkBlur
                   })}
                   placeholder="https://myfigurecollection.net/item/..."
-		  onBlur={handleMFCLinkBlur} // Add blur handler
                 />
                 <InputRightElement>
 		  {isScrapingMFC ? (

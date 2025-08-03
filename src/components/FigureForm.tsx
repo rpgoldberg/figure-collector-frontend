@@ -114,17 +114,13 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     setIsScrapingMFC(true);
 
     try {
-      const token = localStorage.getItem('token');
-      console.log('[FRONTEND] Auth token present:', !!token);
-      
       const requestBody = { mfcLink: currentMfcLink };
       console.log('[FRONTEND] Making request to /api/figures/scrape-mfc with body:', requestBody);
 
       const response = await fetch('/api/figures/scrape-mfc', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
       });

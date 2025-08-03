@@ -16,7 +16,11 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
   
   const deleteMutation = useMutation(() => deleteFigure(figure._id), {
     onSuccess: () => {
+      // Invalidate all queries that might contain figure data
       queryClient.invalidateQueries('figures');
+      queryClient.invalidateQueries('recentFigures');
+      queryClient.invalidateQueries('dashboardStats');
+      
       toast({
         title: 'Figure deleted',
         description: `${figure.name} has been removed from your collection.`,

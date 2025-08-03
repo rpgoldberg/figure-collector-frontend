@@ -24,7 +24,11 @@ const AddFigure: React.FC = () => {
   
   const mutation = useMutation(createFigure, {
     onSuccess: () => {
+      // Invalidate all queries that might contain figure data
       queryClient.invalidateQueries('figures');
+      queryClient.invalidateQueries('recentFigures');
+      queryClient.invalidateQueries('dashboardStats');
+      
       toast({
         title: 'Success',
         description: 'Figure added successfully',

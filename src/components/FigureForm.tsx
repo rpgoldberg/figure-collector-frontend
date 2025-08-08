@@ -16,6 +16,7 @@ import {
   Text,
   useToast,
   Spinner,
+  Image,
 } from '@chakra-ui/react';
 import { useForm } from 'react-hook-form';
 import { FaLink, FaQuestionCircle, FaImage } from 'react-icons/fa';
@@ -29,6 +30,7 @@ interface FigureFormProps {
 
 const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoading }) => {
   const [isScrapingMFC, setIsScrapingMFC] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const {
     register,
     handleSubmit,
@@ -255,9 +257,45 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     previousMfcLink.current = currentMfcLink;
   }, [mfcLink, handleMFCLinkBlur]);
 
+  // Reset image error when imageUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>
       <VStack spacing={6} align="stretch">
+        {/* MFC Link at top - full width */}
+        <FormControl isInvalid={!!errors.mfcLink}>
+          <FormLabel>MyFigureCollection Link</FormLabel>
+          <InputGroup>
+            <Input
+              {...register('mfcLink', {
+                validate: validateUrl
+              })}
+              placeholder="https://myfigurecollection.net/item/..."
+            />
+            <InputRightElement>
+	      {isScrapingMFC ? (
+                <Spinner size="sm" />
+	      ) : (
+                <IconButton
+                  aria-label="Open MFC link"
+                  icon={<FaLink />}
+                  size="sm"
+                  variant="ghost"
+                  onClick={openMfcLink}
+                  isDisabled={!mfcLink}
+                />
+	      )}
+            </InputRightElement>
+          </InputGroup>
+          <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
+          <Text fontSize="xs" color="gray.500" mt={1}>
+            Click the link icon to open MFC page, then manually copy data if auto-population fails
+          </Text>
+        </FormControl>
+
         <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)' }} gap={6}>
           <GridItem>
             <FormControl isInvalid={!!errors.manufacturer}>
@@ -301,38 +339,6 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 onBlur={handleScaleBlur}
               />
               <FormErrorMessage>{errors.scale?.message}</FormErrorMessage>
-            </FormControl>
-          </GridItem>
-
-          <GridItem>
-            <FormControl isInvalid={!!errors.mfcLink}>
-              <FormLabel>MyFigureCollection Link</FormLabel>
-              <InputGroup>
-                <Input
-                  {...register('mfcLink', {
-                    validate: validateUrl
-                  })}
-                  placeholder="https://myfigurecollection.net/item/..."
-                />
-                <InputRightElement>
-		  {isScrapingMFC ? (
-                    <Spinner size="sm" />
-		  ) : (
-                    <IconButton
-                      aria-label="Open MFC link"
-                      icon={<FaLink />}
-                      size="sm"
-                      variant="ghost"
-                      onClick={openMfcLink}
-                      isDisabled={!mfcLink}
-                    />
-		  )}
-                </InputRightElement>
-              </InputGroup>
-              <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Click the link icon to open MFC page, then manually copy data if auto-population fails
-              </Text>
             </FormControl>
           </GridItem>
 
@@ -395,20 +401,18 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                     borderRadius="md"
                     overflow="hidden"
                   >
-                    <img
-                      src={imageUrl}
-                      alt="Figure preview"
-                      style={{
-                        maxHeight: '100%',
-                        maxWidth: '100%',
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        target.parentElement!.innerHTML = '<Text color="gray.500">Failed to load image</Text>';
-                      }}
-                    />
+                    {imageError ? (
+                      <Text color="gray.500">Failed to load image</Text>
+                    ) : (
+                      <Image
+                        src={imageUrl}
+                        alt="Figure preview"
+                        maxH="100%"
+                        maxW="100%"
+                        objectFit="contain"
+                        onError={() => setImageError(true)}
+                      />
+                    )}
                   </Box>
                 </Box>
               )}

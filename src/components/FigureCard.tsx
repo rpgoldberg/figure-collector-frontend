@@ -75,9 +75,19 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
       </Box>
 
       <Box p={4}>
-        <Badge colorScheme="brand" mb={2}>
-          {figure.scale}
-        </Badge>
+        {figure.mfcLink && (
+          <Link 
+            href={figure.mfcLink} 
+            isExternal 
+            fontSize="xs" 
+            color="blue.500" 
+            display="block" 
+            mb={2}
+            noOfLines={1}
+          >
+            MFC: {figure.mfcLink}
+          </Link>
+        )}
         <Link
           as={RouterLink}
           to={`/figures/${figure._id}`}
@@ -93,6 +103,9 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
         <Text fontSize="sm" color="gray.600" mb={2}>
           {figure.manufacturer}
         </Text>
+        <Badge colorScheme="brand" mb={2}>
+          {figure.scale}
+        </Badge>
 
         <Text fontSize="xs" color="gray.500">
           Location: {figure.location} (Box {figure.boxNumber})

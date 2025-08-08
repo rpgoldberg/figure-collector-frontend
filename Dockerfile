@@ -22,8 +22,8 @@ COPY nginx/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Set default environment variables
 ENV BACKEND_HOST=figure-collector-backend
-ENV BACKEND_PORT=5000
-ENV FRONTEND_PORT=80
+ENV BACKEND_PORT=5050
+ENV FRONTEND_PORT=5051
 
 EXPOSE ${FRONTEND_PORT}
 

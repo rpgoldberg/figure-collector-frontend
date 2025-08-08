@@ -8,9 +8,6 @@ RUN npm install
 
 COPY . .
 
-# Copy version.json from infra if it exists (build context should include it)  
-COPY ../figure-collector-infra/version.json* ./
-
 RUN npm run build
 
 FROM nginx:alpine

@@ -24,7 +24,7 @@ import {
   MenuDivider,
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon, ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
-import { FaUser, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import { useAuthStore } from '../stores/authStore';
 import { useQueryClient } from 'react-query';
 

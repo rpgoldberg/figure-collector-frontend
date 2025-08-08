@@ -9,7 +9,6 @@ import {
   FormLabel,
   useDisclosure,
   Collapse,
-  IconButton,
   SimpleGrid,
 } from '@chakra-ui/react';
 import { FaFilter, FaTimes } from 'react-icons/fa';

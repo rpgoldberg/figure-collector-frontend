@@ -21,7 +21,7 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
 } from '@chakra-ui/react';
-import { FaEdit, FaTrash, FaArrowLeft, FaLink, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaArrowLeft, FaExternalLinkAlt } from 'react-icons/fa';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { getFigureById, deleteFigure } from '../api';
 

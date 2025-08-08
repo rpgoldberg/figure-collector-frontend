@@ -56,16 +56,20 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
       transition="all 0.3s"
       _hover={{ shadow: 'lg', transform: 'translateY(-2px)' }}
     >
-      <Box position="relative" pb="60%">
+      <Box 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="center" 
+        h="200px" 
+        bg="gray.50"
+        overflow="hidden"
+      >
         <Image
           src={figure.imageUrl || '/placeholder-figure.png'}
           alt={figure.name}
-          position="absolute"
-          top="0"
-          left="0"
-          w="100%"
-          h="100%"
-          objectFit="cover"
+          maxH="100%"
+          maxW="100%"
+          objectFit="contain"
           fallbackSrc="https://via.placeholder.com/300x200?text=No+Image"
         />
       </Box>

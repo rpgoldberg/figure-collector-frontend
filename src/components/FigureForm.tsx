@@ -383,6 +383,35 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
               <Text fontSize="xs" color="gray.500" mt={1}>
                 Leave blank to auto-fetch from MFC
               </Text>
+              {imageUrl && (
+                <Box mt={4} p={4} border="1px" borderColor="gray.200" borderRadius="md">
+                  <Text fontSize="sm" fontWeight="semibold" mb={2}>Image Preview:</Text>
+                  <Box 
+                    display="flex" 
+                    alignItems="center" 
+                    justifyContent="center" 
+                    maxH="300px" 
+                    bg="gray.50"
+                    borderRadius="md"
+                    overflow="hidden"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt="Figure preview"
+                      style={{
+                        maxHeight: '100%',
+                        maxWidth: '100%',
+                        objectFit: 'contain'
+                      }}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.parentElement!.innerHTML = '<Text color="gray.500">Failed to load image</Text>';
+                      }}
+                    />
+                  </Box>
+                </Box>
+              )}
             </FormControl>
           </GridItem>
         </Grid>

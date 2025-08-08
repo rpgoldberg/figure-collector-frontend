@@ -30,7 +30,13 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # Proxy /version to backend
+    # Frontend version endpoint - serve static JSON  
+    location /frontend-version {
+        alias /usr/share/nginx/html/frontend-version.json;
+        add_header Content-Type application/json;
+    }
+
+    # Proxy /version to backend for aggregated version info
     location /version {
         proxy_pass http://backend/version;
         proxy_http_version 1.1;

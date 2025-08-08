@@ -14,7 +14,7 @@ const Layout: React.FC = () => {
       .then(data => {
         setVersionInfo(data);
         // Console log for developers
-        console.log(`App v${data.application?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
+        console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
       })
       .catch(err => console.error('Failed to fetch version info:', err));
   }, []);

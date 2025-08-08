@@ -11,6 +11,21 @@ server {
     
     access_log off;
     
+    # Cache bust for HTML files - always fetch latest
+    location ~* \.html$ {
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Long cache for assets with hashes - safe to cache forever
+    location ~* \.(js|css|woff|woff2|ttf|svg|ico|png|jpg|jpeg|gif)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Default location for everything else
     location / {
         try_files $uri $uri/ /index.html;
     }

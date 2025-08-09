@@ -101,6 +101,7 @@ const Login: React.FC = () => {
               type="email"
               placeholder="Your email address"
               size="lg"
+              autoComplete="email"
               {...register('email', {
                 required: 'Email is required',
                 pattern: {
@@ -119,6 +120,7 @@ const Login: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Your password"
                 size="lg"
+                autoComplete="current-password"
                 {...register('password', {
                   required: 'Password is required',
                 })}

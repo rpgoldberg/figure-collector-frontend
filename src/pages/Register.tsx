@@ -107,6 +107,7 @@ const Register: React.FC = () => {
             <Input
               placeholder="Choose a username"
               size="lg"
+              autoComplete="username"
               {...register('username', {
                 required: 'Username is required',
                 minLength: {
@@ -124,6 +125,7 @@ const Register: React.FC = () => {
               type="email"
               placeholder="Your email address"
               size="lg"
+              autoComplete="email"
               {...register('email', {
                 required: 'Email is required',
                 pattern: {
@@ -142,6 +144,7 @@ const Register: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Create a password"
                 size="lg"
+                autoComplete="new-password"
                 {...register('password', {
                   required: 'Password is required',
                   minLength: {
@@ -171,6 +174,7 @@ const Register: React.FC = () => {
               type={showPassword ? 'text' : 'password'}
               placeholder="Confirm your password"
               size="lg"
+              autoComplete="new-password"
               {...register('confirmPassword', {
                 required: 'Please confirm your password',
                 validate: (value) => value === password || 'Passwords do not match',

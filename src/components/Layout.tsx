@@ -74,6 +74,38 @@ const Layout: React.FC = () => {
                           <Text color="gray.500">({versionInfo.services?.scraper?.status || 'unknown'})</Text>
                         </HStack>
                       </VStack>
+                      
+                      {versionInfo.validation && (
+                        <>
+                          <Box borderTop="1px" borderColor="gray.200" pt={2} mt={2}>
+                            <HStack>
+                              <Text fontSize="xs" fontWeight="semibold">Validation:</Text>
+                              <Badge 
+                                colorScheme={versionInfo.validation.valid ? 'green' : versionInfo.validation.status === 'warning' ? 'yellow' : 'red'} 
+                                size="sm"
+                              >
+                                {versionInfo.validation.status === 'tested' ? 'Tested' : 
+                                 versionInfo.validation.status === 'compatible' ? 'Compatible' :
+                                 versionInfo.validation.status === 'warning' ? 'Warning' : 'Invalid'}
+                              </Badge>
+                            </HStack>
+                            {versionInfo.validation.message && (
+                              <Text fontSize="xs" color="gray.600" mt={1}>
+                                {versionInfo.validation.message}
+                              </Text>
+                            )}
+                            {versionInfo.validation.warnings && versionInfo.validation.warnings.length > 0 && (
+                              <VStack align="start" mt={1} spacing={0}>
+                                {versionInfo.validation.warnings.map((warning: string, index: number) => (
+                                  <Text key={index} fontSize="xs" color="orange.600">
+                                    • {warning}
+                                  </Text>
+                                ))}
+                              </VStack>
+                            )}
+                          </Box>
+                        </>
+                      )}
                     </VStack>
                   </PopoverBody>
                 </PopoverContent>

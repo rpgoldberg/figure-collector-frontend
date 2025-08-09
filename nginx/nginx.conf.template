@@ -30,6 +30,12 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # Frontend health endpoint
+    location /health {
+        add_header Content-Type application/json;
+        return 200 '{"status":"healthy","service":"figure-collector-frontend","timestamp":"2025-08-09T00:00:00.000Z"}';
+    }
+
     # Frontend version endpoint - serve static JSON  
     location /frontend-version {
         alias /usr/share/nginx/html/frontend-version.json;

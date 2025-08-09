@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Box, Container, Text, Flex } from '@chakra-ui/react';
+import { Box, Container, Text, Flex, Popover, PopoverTrigger, PopoverContent, PopoverBody, VStack, Badge, HStack } from '@chakra-ui/react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
@@ -41,9 +41,43 @@ const Layout: React.FC = () => {
               Figure Collector
             </Text>
             {versionInfo && (
-              <Text fontSize="xs" color="gray.500">
-                v{versionInfo.application?.version || 'unknown'} • {versionInfo.application?.releaseDate || 'unknown'}
-              </Text>
+              <Popover trigger="hover" placement="top-end">
+                <PopoverTrigger>
+                  <Text fontSize="xs" color="gray.500" cursor="pointer" _hover={{ color: "gray.700" }}>
+                    v{versionInfo.application?.version || 'unknown'} • {versionInfo.application?.releaseDate || 'unknown'}
+                  </Text>
+                </PopoverTrigger>
+                <PopoverContent width="auto" maxW="400px">
+                  <PopoverBody>
+                    <VStack align="start" spacing={2}>
+                      <Text fontWeight="semibold" fontSize="sm">Service Versions</Text>
+                      <VStack align="start" spacing={1} fontSize="xs">
+                        <HStack>
+                          <Text minW="70px">Frontend:</Text>
+                          <Badge colorScheme={versionInfo.services?.frontend?.status === 'ok' ? 'green' : 'red'} size="sm">
+                            v{versionInfo.services?.frontend?.version || 'unknown'}
+                          </Badge>
+                          <Text color="gray.500">({versionInfo.services?.frontend?.status || 'unknown'})</Text>
+                        </HStack>
+                        <HStack>
+                          <Text minW="70px">Backend:</Text>
+                          <Badge colorScheme={versionInfo.services?.backend?.status === 'ok' ? 'green' : 'red'} size="sm">
+                            v{versionInfo.services?.backend?.version || 'unknown'}
+                          </Badge>
+                          <Text color="gray.500">({versionInfo.services?.backend?.status || 'unknown'})</Text>
+                        </HStack>
+                        <HStack>
+                          <Text minW="70px">Scraper:</Text>
+                          <Badge colorScheme={versionInfo.services?.scraper?.status === 'ok' ? 'green' : 'red'} size="sm">
+                            v{versionInfo.services?.scraper?.version || 'unknown'}
+                          </Badge>
+                          <Text color="gray.500">({versionInfo.services?.scraper?.status || 'unknown'})</Text>
+                        </HStack>
+                      </VStack>
+                    </VStack>
+                  </PopoverBody>
+                </PopoverContent>
+              </Popover>
             )}
           </Flex>
         </Container>

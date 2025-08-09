@@ -14,7 +14,7 @@ const Layout: React.FC = () => {
     // Register frontend service with backend first
     const registerFrontend = async () => {
       try {
-        const response = await fetch('/api/register-service', {
+        const response = await fetch('/register-service', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

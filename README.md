@@ -24,6 +24,20 @@ React frontend for the Figure Collector application. Provides a user interface f
 
 The frontend automatically registers its version with the backend service on startup. This eliminates circular dependencies and provides a clean architecture where:
 
-- Frontend self-registers version from `package.json` on startup
+- Frontend self-registers version from `package.json` on startup via `/register-service` endpoint
 - Backend acts as orchestrator for all service version information
 - Version info is displayed in the footer with hover popup showing service details
+
+## API Routing
+
+The nginx configuration handles two types of endpoints:
+
+**Business Logic APIs** (prefixed with `/api`)
+- `/api/figures/*` → proxied to backend `/figures/*`
+- `/api/users/*` → proxied to backend `/users/*` 
+- Uses `REACT_APP_API_URL=/api` environment variable
+
+**Infrastructure Endpoints** (direct proxy)
+- `/version` → proxied to backend `/version` (aggregated service versions)
+- `/register-service` → proxied to backend `/register-service` (service registration)
+- `/health` → served by frontend nginx directly

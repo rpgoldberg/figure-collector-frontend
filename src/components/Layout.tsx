@@ -4,19 +4,52 @@ import { Box, Container, Text, Flex, Popover, PopoverTrigger, PopoverContent, Po
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
+// Import package.json to get version
+const packageJson = require('../../package.json');
+
 const Layout: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch version info on app load
-    fetch('/version')
-      .then(res => res.json())
-      .then(data => {
-        setVersionInfo(data);
-        // Console log for developers
-        console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
-      })
-      .catch(err => console.error('Failed to fetch version info:', err));
+    // Register frontend service with backend first
+    const registerFrontend = async () => {
+      try {
+        const response = await fetch('/api/register-service', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            serviceName: 'frontend',
+            version: packageJson.version,
+            name: packageJson.name
+          }),
+        });
+        
+        if (response.ok) {
+          console.log(`[REGISTER] Frontend v${packageJson.version} registered successfully`);
+        } else {
+          console.warn('[REGISTER] Failed to register frontend service');
+        }
+      } catch (error) {
+        console.error('[REGISTER] Error registering frontend service:', error);
+      }
+    };
+
+    // Register frontend first, then fetch version info
+    registerFrontend().then(() => {
+      // Wait a brief moment for registration to complete
+      setTimeout(() => {
+        fetch('/version')
+          .then(res => res.json())
+          .then(data => {
+            setVersionInfo(data);
+            // Console log for developers
+            console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
+          })
+          .catch(err => console.error('Failed to fetch version info:', err));
+      }, 100);
+    });
   }, []);
 
   return (

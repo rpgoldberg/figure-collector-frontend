@@ -40,11 +40,6 @@ server {
         return 200 '{"status":"healthy","service":"figure-collector-frontend","timestamp":"2025-08-09T00:00:00.000Z"}';
     }
 
-    # Frontend version endpoint - serve static JSON  
-    location = /frontend-version {
-        try_files /frontend-version.json =404;
-        add_header Content-Type application/json;
-    }
 
     # Proxy /version to backend for aggregated version info
     location /version {

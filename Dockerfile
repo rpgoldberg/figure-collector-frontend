@@ -17,9 +17,7 @@ RUN apk add --no-cache gettext
 
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Create frontend version.json from package.json
-COPY --from=build /app/package.json /tmp/package.json
-RUN echo "{\"name\":\"$(cat /tmp/package.json | grep '\"name\"' | cut -d'"' -f4)\",\"version\":\"$(cat /tmp/package.json | grep '\"version\"' | cut -d'"' -f4)\"}" > /usr/share/nginx/html/frontend-version.json
+# Frontend version is now handled via self-registration to backend
 
 # Copy nginx template
 COPY nginx/nginx.conf.template /etc/nginx/templates/default.conf.template

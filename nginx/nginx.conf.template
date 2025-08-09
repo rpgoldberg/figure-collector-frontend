@@ -1,11 +1,15 @@
-upstream backend {
-    server ${BACKEND_HOST}:${BACKEND_PORT};
-}
+# Use variables for dynamic resolution instead of upstream block
+# This prevents startup failures when backend is not immediately available
 
 
 server {
     listen ${FRONTEND_PORT};
     server_name _;
+    
+    # Enable DNS resolver for dynamic backend resolution
+    resolver 127.0.0.11 valid=30s;
+    set $backend_host ${BACKEND_HOST};
+    set $backend_port ${BACKEND_PORT};
     root /usr/share/nginx/html;
     index index.html;
     
@@ -37,14 +41,14 @@ server {
     }
 
     # Frontend version endpoint - serve static JSON  
-    location /frontend-version {
-        alias /usr/share/nginx/html/frontend-version.json;
+    location = /frontend-version {
+        try_files /frontend-version.json =404;
         add_header Content-Type application/json;
     }
 
     # Proxy /version to backend for aggregated version info
     location /version {
-        proxy_pass http://backend/version;
+        proxy_pass http://$backend_host:$backend_port/version;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -53,7 +57,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://backend/;
+        proxy_pass http://$backend_host:$backend_port/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

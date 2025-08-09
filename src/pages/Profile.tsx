@@ -184,6 +184,7 @@ const Profile: React.FC = () => {
             <FormControl isInvalid={!!errors.username}>
               <FormLabel>Username</FormLabel>
               <Input
+                autoComplete="username"
                 {...register('username', {
                   required: 'Username is required',
                   minLength: {
@@ -203,6 +204,7 @@ const Profile: React.FC = () => {
               <FormLabel>Email Address</FormLabel>
               <Input
                 type="email"
+                autoComplete="email"
                 {...register('email', {
                   required: 'Email is required',
                   pattern: {
@@ -227,6 +229,7 @@ const Profile: React.FC = () => {
               <InputGroup>
                 <Input
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   {...register('newPassword', {
                     minLength: {
                       value: 6,
@@ -257,6 +260,7 @@ const Profile: React.FC = () => {
               <FormLabel>Confirm New Password</FormLabel>
               <Input
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 {...register('confirmNewPassword', {
                   validate: (value) =>
                     !newPassword || value === newPassword || 'Passwords do not match',

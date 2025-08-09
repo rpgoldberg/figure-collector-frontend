@@ -25,7 +25,7 @@ const Search: React.FC = () => {
   
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   
-  const { data: searchResults, isLoading, error, refetch } = useQuery(
+  const { data: searchResults, isLoading, error } = useQuery(
     ['search', searchQuery],
     () => searchFigures(searchQuery),
     {

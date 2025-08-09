@@ -21,7 +21,7 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
 } from '@chakra-ui/react';
-import { FaEdit, FaTrash, FaArrowLeft, FaLink, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaArrowLeft, FaExternalLinkAlt } from 'react-icons/fa';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { getFigureById, deleteFigure } from '../api';
 
@@ -50,7 +50,11 @@ const FigureDetail: React.FC = () => {
   
   const deleteMutation = useMutation(() => deleteFigure(id!), {
     onSuccess: () => {
+      // Invalidate all queries that might contain figure data
       queryClient.invalidateQueries('figures');
+      queryClient.invalidateQueries('recentFigures');
+      queryClient.invalidateQueries('dashboardStats');
+      
       toast({
         title: 'Success',
         description: 'Figure deleted successfully',

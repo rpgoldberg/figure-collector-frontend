@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -15,6 +15,8 @@ import {
   Tooltip,
   Text,
   useToast,
+  Spinner,
+  Image,
 } from '@chakra-ui/react';
 import { useForm } from 'react-hook-form';
 import { FaLink, FaQuestionCircle, FaImage } from 'react-icons/fa';
@@ -27,12 +29,15 @@ interface FigureFormProps {
 }
 
 const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoading }) => {
+  const [isScrapingMFC, setIsScrapingMFC] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
     watch,
+    getValues,
   } = useForm<FigureFormData>({
     defaultValues: initialData || {
       manufacturer: '',
@@ -48,6 +53,10 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   const toast = useToast();
   const mfcLink = watch('mfcLink');
   const imageUrl = watch('imageUrl');
+  const previousMfcLink = useRef<string>('');
+
+  // Debug: Log every render to see what's happening (commented out to reduce noise)
+  // console.log('[FRONTEND DEBUG] Component render, mfcLink:', mfcLink);
 
   const openMfcLink = () => {
     if (mfcLink) {
@@ -88,9 +97,205 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     setValue('scale', formattedScale);
   };
 
+  // Function to scrape MFC data and populate fields
+  const handleMFCLinkBlur = useCallback(async () => {
+    const currentMfcLink = getValues('mfcLink');
+    console.log('[FRONTEND] MFC link blur triggered with:', currentMfcLink);
+
+    if (!currentMfcLink || !currentMfcLink.trim()) {
+      console.log('[FRONTEND] No MFC link provided, skipping scrape');
+      return;
+    }
+
+    if (!currentMfcLink.includes('myfigurecollection.net')) {
+      console.log('[FRONTEND] Not an MFC link, skipping scrape');
+      return;
+    }
+
+    console.log('[FRONTEND] Starting MFC scraping process...');
+    setIsScrapingMFC(true);
+
+    try {
+      const requestBody = { mfcLink: currentMfcLink };
+      console.log('[FRONTEND] Making request to /api/figures/scrape-mfc with body:', requestBody);
+
+      const response = await fetch('/api/figures/scrape-mfc', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('[FRONTEND] Response status:', response.status);
+      console.log('[FRONTEND] Response headers:', Object.fromEntries(response.headers.entries()));
+
+      const result = await response.json();
+      console.log('[FRONTEND] Response data:', result);
+
+      if (!response.ok) {
+        console.error('[FRONTEND] Response not ok:', response.status, result);
+        toast({
+          title: 'Error',
+          description: result.message || 'Failed to scrape MFC data',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      if (result.success && result.data) {
+        const scrapedData = result.data;
+        console.log('[FRONTEND] Processing scraped data:', scrapedData);
+
+        // Check if we got a manual extraction indicator
+        if (scrapedData.imageUrl && scrapedData.imageUrl.startsWith('MANUAL_EXTRACT:')) {
+          console.log('[FRONTEND] Manual extraction required');
+          toast({
+            title: 'Auto-scraping blocked',
+            description: 'MFC has anti-bot protection. Click the link icon to open the page and manually copy the data.',
+            status: 'warning',
+            duration: 8000,
+            isClosable: true,
+          });
+          return;
+        }
+
+        let fieldsPopulated = 0;
+
+        // Only populate empty fields
+        if (!getValues('imageUrl') && scrapedData.imageUrl) {
+          setValue('imageUrl', scrapedData.imageUrl);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set imageUrl:', scrapedData.imageUrl);
+        }
+        if (!getValues('manufacturer') && scrapedData.manufacturer) {
+          setValue('manufacturer', scrapedData.manufacturer);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set manufacturer:', scrapedData.manufacturer);
+        }
+        if (!getValues('name') && scrapedData.name) {
+          setValue('name', scrapedData.name);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set name:', scrapedData.name);
+        }
+        if (!getValues('scale') && scrapedData.scale) {
+          setValue('scale', scrapedData.scale);
+          fieldsPopulated++;
+          console.log('[FRONTEND] Set scale:', scrapedData.scale);
+        }
+
+        console.log(`[FRONTEND] Populated ${fieldsPopulated} fields from MFC data`);
+
+        if (fieldsPopulated > 0) {
+          toast({
+            title: 'Success',
+            description: `Auto-populated ${fieldsPopulated} fields from MFC!`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+        } else {
+          toast({
+            title: 'Info',
+            description: 'No new data found to populate (fields may already be filled)',
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+        }
+      } else {
+        console.log('[FRONTEND] No valid data in response:', result);
+        toast({
+          title: 'Warning',
+          description: 'No data could be extracted from MFC link',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error('[FRONTEND] Error scraping MFC data:', error);
+      toast({
+        title: 'Error',
+        description: 'Network error while contacting server',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      console.log('[FRONTEND] MFC scraping process completed');
+      setIsScrapingMFC(false);
+    }
+  }, [getValues, setValue, toast]);
+
+  // Watch for MFC link changes and trigger scraping
+  useEffect(() => {
+    const currentMfcLink = mfcLink || '';
+    console.log('[FRONTEND] useEffect triggered, current link:', currentMfcLink);
+    console.log('[FRONTEND] Previous link:', previousMfcLink.current);
+    
+    // Only trigger if the link actually changed and it's not empty
+    if (currentMfcLink !== previousMfcLink.current && 
+        currentMfcLink.trim() && 
+        currentMfcLink.includes('myfigurecollection.net')) {
+      
+      console.log('[FRONTEND] MFC link changed, triggering scrape in 1 second...');
+      // Add a delay to let user finish typing
+      const timer = setTimeout(() => {
+        console.log('[FRONTEND] Executing delayed scrape');
+        handleMFCLinkBlur();
+      }, 1000);
+      
+      return () => {
+        console.log('[FRONTEND] Cleaning up timer');
+        clearTimeout(timer);
+      };
+    }
+    
+    previousMfcLink.current = currentMfcLink;
+  }, [mfcLink, handleMFCLinkBlur]);
+
+  // Reset image error when imageUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+
   return (
     <Box as="form" onSubmit={handleSubmit(onSubmit)}>
       <VStack spacing={6} align="stretch">
+        {/* MFC Link at top - full width */}
+        <FormControl isInvalid={!!errors.mfcLink}>
+          <FormLabel>MyFigureCollection Link</FormLabel>
+          <InputGroup>
+            <Input
+              {...register('mfcLink', {
+                validate: validateUrl
+              })}
+              placeholder="https://myfigurecollection.net/item/..."
+            />
+            <InputRightElement>
+	      {isScrapingMFC ? (
+                <Spinner size="sm" />
+	      ) : (
+                <IconButton
+                  aria-label="Open MFC link"
+                  icon={<FaLink />}
+                  size="sm"
+                  variant="ghost"
+                  onClick={openMfcLink}
+                  isDisabled={!mfcLink}
+                />
+	      )}
+            </InputRightElement>
+          </InputGroup>
+          <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
+          <Text fontSize="xs" color="gray.500" mt={1}>
+            Click the link icon to open MFC page, then manually copy data if auto-population fails
+          </Text>
+        </FormControl>
+
         <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)' }} gap={6}>
           <GridItem>
             <FormControl isInvalid={!!errors.manufacturer}>
@@ -129,7 +334,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 </Tooltip>
               </FormLabel>
               <Input
-                {...register('scale', { required: 'Scale is required' })}
+                {...register('scale')} //optional
                 placeholder="e.g., 1/8, 1/7, Nendoroid"
                 onBlur={handleScaleBlur}
               />
@@ -138,39 +343,10 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
           </GridItem>
 
           <GridItem>
-            <FormControl isInvalid={!!errors.mfcLink}>
-              <FormLabel>MyFigureCollection Link</FormLabel>
-              <InputGroup>
-                <Input
-                  {...register('mfcLink', {
-                    required: 'MFC link is required',
-                    validate: validateUrl,
-                  })}
-                  placeholder="https://myfigurecollection.net/item/..."
-                />
-                <InputRightElement>
-                  <IconButton
-                    aria-label="Open MFC link"
-                    icon={<FaLink />}
-                    size="sm"
-                    variant="ghost"
-                    onClick={openMfcLink}
-                    isDisabled={!mfcLink}
-                  />
-                </InputRightElement>
-              </InputGroup>
-              <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Used to automatically fetch the figure's image
-              </Text>
-            </FormControl>
-          </GridItem>
-
-          <GridItem>
             <FormControl isInvalid={!!errors.location}>
               <FormLabel>Storage Location</FormLabel>
               <Input
-                {...register('location', { required: 'Location is required' })}
+                {...register('location')} //optional
                 placeholder="e.g., Shelf, Display Case, Storage Room"
               />
               <FormErrorMessage>{errors.location?.message}</FormErrorMessage>
@@ -181,7 +357,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
             <FormControl isInvalid={!!errors.boxNumber}>
               <FormLabel>Box Number/ID</FormLabel>
               <Input
-                {...register('boxNumber', { required: 'Box number is required' })}
+                {...register('boxNumber')} //optional
                 placeholder="e.g., A1, Box 3"
               />
               <FormErrorMessage>{errors.boxNumber?.message}</FormErrorMessage>
@@ -213,6 +389,33 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
               <Text fontSize="xs" color="gray.500" mt={1}>
                 Leave blank to auto-fetch from MFC
               </Text>
+              {imageUrl && (
+                <Box mt={4} p={4} border="1px" borderColor="gray.200" borderRadius="md">
+                  <Text fontSize="sm" fontWeight="semibold" mb={2}>Image Preview:</Text>
+                  <Box 
+                    display="flex" 
+                    alignItems="center" 
+                    justifyContent="center" 
+                    maxH="300px" 
+                    bg="gray.50"
+                    borderRadius="md"
+                    overflow="hidden"
+                  >
+                    {imageError ? (
+                      <Text color="gray.500">Failed to load image</Text>
+                    ) : (
+                      <Image
+                        src={imageUrl}
+                        alt="Figure preview"
+                        maxH="100%"
+                        maxW="100%"
+                        objectFit="contain"
+                        onError={() => setImageError(true)}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              )}
             </FormControl>
           </GridItem>
         </Grid>

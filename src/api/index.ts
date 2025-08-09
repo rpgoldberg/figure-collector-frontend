@@ -21,6 +21,39 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle response errors and token expiration
+api.interceptors.response.use(
+  (response) => {
+    // On successful API calls, check if we got a new token
+    const newToken = response.headers['x-new-token'] || response.headers['authorization'];
+    if (newToken) {
+      const { user, setUser } = useAuthStore.getState();
+      if (user) {
+        // Update the token in the store (refresh token on activity)
+        setUser({ ...user, token: newToken.replace('Bearer ', '') });
+      }
+    }
+    return response;
+  },
+  (error) => {
+    // Handle 401 Unauthorized (expired/invalid token)
+    if (error.response?.status === 401) {
+      const { logout } = useAuthStore.getState();
+      
+      // Clear auth state
+      logout();
+      
+      // Clear localStorage
+      localStorage.removeItem('auth-storage');
+      
+      // Redirect to login page
+      window.location.href = '/login';
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
   const response = await api.post('/users/login', { email, password });

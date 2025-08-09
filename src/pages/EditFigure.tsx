@@ -48,8 +48,12 @@ const EditFigure: React.FC = () => {
     (data: FigureFormData) => updateFigure(id!, data),
     {
       onSuccess: () => {
+        // Invalidate all queries that might contain figure data
         queryClient.invalidateQueries(['figure', id]);
         queryClient.invalidateQueries('figures');
+        queryClient.invalidateQueries('recentFigures');
+        queryClient.invalidateQueries('dashboardStats');
+        
         toast({
           title: 'Success',
           description: 'Figure updated successfully',

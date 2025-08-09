@@ -1,14 +1,61 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Box, Container } from '@chakra-ui/react';
+import { Box, Container, Text, Flex, Popover, PopoverTrigger, PopoverContent, PopoverBody, VStack, Badge, HStack } from '@chakra-ui/react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
+// Import package.json to get version
+const packageJson = require('../../package.json');
+
 const Layout: React.FC = () => {
+  const [versionInfo, setVersionInfo] = useState<any>(null);
+
+  useEffect(() => {
+    // Register frontend service with backend first
+    const registerFrontend = async () => {
+      try {
+        const response = await fetch('/register-service', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            serviceName: 'frontend',
+            version: packageJson.version,
+            name: packageJson.name
+          }),
+        });
+        
+        if (response.ok) {
+          console.log(`[REGISTER] Frontend v${packageJson.version} registered successfully`);
+        } else {
+          console.warn('[REGISTER] Failed to register frontend service');
+        }
+      } catch (error) {
+        console.error('[REGISTER] Error registering frontend service:', error);
+      }
+    };
+
+    // Register frontend first, then fetch version info
+    registerFrontend().then(() => {
+      // Wait a brief moment for registration to complete
+      setTimeout(() => {
+        fetch('/version')
+          .then(res => res.json())
+          .then(data => {
+            setVersionInfo(data);
+            // Console log for developers
+            console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
+          })
+          .catch(err => console.error('Failed to fetch version info:', err));
+      }, 100);
+    });
+  }, []);
+
   return (
-    <Box minH="100vh">
+    <Box minH="100vh" display="flex" flexDirection="column">
       <Navbar />
-      <Container maxW="container.xl" pt={5} pb={10}>
+      <Container maxW="container.xl" pt={5} pb={10} flex="1">
         <Box display="flex" gap={5}>
           <Box w="250px" display={{ base: 'none', md: 'block' }}>
             <Sidebar />
@@ -18,6 +65,88 @@ const Layout: React.FC = () => {
           </Box>
         </Box>
       </Container>
+      
+      {/* Footer with version info */}
+      <Box as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
+        <Container maxW="container.xl">
+          <Flex justify="space-between" align="center">
+            <Text fontSize="sm" color="gray.600">
+              Figure Collector
+            </Text>
+            {versionInfo && (
+              <Popover trigger="hover" placement="top-end">
+                <PopoverTrigger>
+                  <Text fontSize="xs" color="gray.500" cursor="pointer" _hover={{ color: "gray.700" }}>
+                    v{versionInfo.application?.version || 'unknown'} • {versionInfo.application?.releaseDate || 'unknown'}
+                  </Text>
+                </PopoverTrigger>
+                <PopoverContent width="auto" maxW="400px">
+                  <PopoverBody>
+                    <VStack align="start" spacing={2}>
+                      <Text fontWeight="semibold" fontSize="sm">Service Versions</Text>
+                      <VStack align="start" spacing={1} fontSize="xs">
+                        <HStack>
+                          <Text minW="70px">Frontend:</Text>
+                          <Badge colorScheme={versionInfo.services?.frontend?.status === 'ok' ? 'green' : 'red'} size="sm">
+                            v{versionInfo.services?.frontend?.version || 'unknown'}
+                          </Badge>
+                          <Text color="gray.500">({versionInfo.services?.frontend?.status || 'unknown'})</Text>
+                        </HStack>
+                        <HStack>
+                          <Text minW="70px">Backend:</Text>
+                          <Badge colorScheme={versionInfo.services?.backend?.status === 'ok' ? 'green' : 'red'} size="sm">
+                            v{versionInfo.services?.backend?.version || 'unknown'}
+                          </Badge>
+                          <Text color="gray.500">({versionInfo.services?.backend?.status || 'unknown'})</Text>
+                        </HStack>
+                        <HStack>
+                          <Text minW="70px">Scraper:</Text>
+                          <Badge colorScheme={versionInfo.services?.scraper?.status === 'ok' ? 'green' : 'red'} size="sm">
+                            v{versionInfo.services?.scraper?.version || 'unknown'}
+                          </Badge>
+                          <Text color="gray.500">({versionInfo.services?.scraper?.status || 'unknown'})</Text>
+                        </HStack>
+                      </VStack>
+                      
+                      {versionInfo.validation && (
+                        <>
+                          <Box borderTop="1px" borderColor="gray.200" pt={2} mt={2}>
+                            <HStack>
+                              <Text fontSize="xs" fontWeight="semibold">Validation:</Text>
+                              <Badge 
+                                colorScheme={versionInfo.validation.valid ? 'green' : versionInfo.validation.status === 'warning' ? 'yellow' : 'red'} 
+                                size="sm"
+                              >
+                                {versionInfo.validation.status === 'tested' ? 'Tested' : 
+                                 versionInfo.validation.status === 'compatible' ? 'Compatible' :
+                                 versionInfo.validation.status === 'warning' ? 'Warning' : 'Invalid'}
+                              </Badge>
+                            </HStack>
+                            {versionInfo.validation.message && (
+                              <Text fontSize="xs" color="gray.600" mt={1}>
+                                {versionInfo.validation.message}
+                              </Text>
+                            )}
+                            {versionInfo.validation.warnings && versionInfo.validation.warnings.length > 0 && (
+                              <VStack align="start" mt={1} spacing={0}>
+                                {versionInfo.validation.warnings.map((warning: string, index: number) => (
+                                  <Text key={index} fontSize="xs" color="orange.600">
+                                    • {warning}
+                                  </Text>
+                                ))}
+                              </VStack>
+                            )}
+                          </Box>
+                        </>
+                      )}
+                    </VStack>
+                  </PopoverBody>
+                </PopoverContent>
+              </Popover>
+            )}
+          </Flex>
+        </Container>
+      </Box>
     </Box>
   );
 };

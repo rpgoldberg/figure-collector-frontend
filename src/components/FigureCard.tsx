@@ -16,7 +16,11 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
   
   const deleteMutation = useMutation(() => deleteFigure(figure._id), {
     onSuccess: () => {
+      // Invalidate all queries that might contain figure data
       queryClient.invalidateQueries('figures');
+      queryClient.invalidateQueries('recentFigures');
+      queryClient.invalidateQueries('dashboardStats');
+      
       toast({
         title: 'Figure deleted',
         description: `${figure.name} has been removed from your collection.`,
@@ -52,24 +56,38 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
       transition="all 0.3s"
       _hover={{ shadow: 'lg', transform: 'translateY(-2px)' }}
     >
-      <Box position="relative" pb="60%">
+      <Box 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="center" 
+        h="200px" 
+        bg="gray.50"
+        overflow="hidden"
+      >
         <Image
           src={figure.imageUrl || '/placeholder-figure.png'}
           alt={figure.name}
-          position="absolute"
-          top="0"
-          left="0"
-          w="100%"
-          h="100%"
-          objectFit="cover"
+          maxH="100%"
+          maxW="100%"
+          objectFit="contain"
           fallbackSrc="https://via.placeholder.com/300x200?text=No+Image"
         />
       </Box>
 
       <Box p={4}>
-        <Badge colorScheme="brand" mb={2}>
-          {figure.scale}
-        </Badge>
+        {figure.mfcLink && (
+          <Link 
+            href={figure.mfcLink} 
+            isExternal 
+            fontSize="xs" 
+            color="blue.500" 
+            display="block" 
+            mb={2}
+            noOfLines={1}
+          >
+            MFC: {figure.mfcLink}
+          </Link>
+        )}
         <Link
           as={RouterLink}
           to={`/figures/${figure._id}`}
@@ -85,6 +103,9 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
         <Text fontSize="sm" color="gray.600" mb={2}>
           {figure.manufacturer}
         </Text>
+        <Badge colorScheme="brand" mb={2}>
+          {figure.scale}
+        </Badge>
 
         <Text fontSize="xs" color="gray.500">
           Location: {figure.location} (Box {figure.boxNumber})

@@ -24,16 +24,27 @@ import {
   MenuDivider,
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon, ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
-import { FaUser, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import { useAuthStore } from '../stores/authStore';
+import { useQueryClient } from 'react-query';
 
 const Navbar: React.FC = () => {
   const { isOpen, onToggle } = useDisclosure();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleLogout = () => {
+    // Clear all React Query cache to prevent user data leakage
+    queryClient.clear();
+    
+    // Clear auth store
     logout();
+    
+    // Clear any remaining localStorage items
+    localStorage.removeItem('token');
+    
+    // Navigate to login
     navigate('/login');
   };
 

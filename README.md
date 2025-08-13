@@ -1,6 +1,6 @@
 # Figure Collector Frontend
 
-React frontend for the Figure Collector application. Provides a user interface for managing figure collections.
+React frontend for the Figure Collector application. Provides a user interface for managing figure collections. Features comprehensive test coverage with React Testing Library and Jest.
 
 ## Features
 
@@ -14,11 +14,39 @@ React frontend for the Figure Collector application. Provides a user interface f
 ## Technology Stack
 
 - TypeScript
-- React
+- React 18
 - Chakra UI
 - React Query
 - React Router
+- React Hook Form
 - Nginx (for static serving and API proxying)
+- **Testing**: React Testing Library + Jest + jest-axe
+
+### Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Build for production
+npm run build
+
+# Run tests in development
+npm test -- --watch
+```
+
+### Environment Variables
+
+```bash
+# Required for API communication
+REACT_APP_API_URL=/api
+
+# Optional for development
+REACT_APP_BACKEND_URL=http://localhost:5060
+```
 
 ## Version Management
 
@@ -53,3 +81,207 @@ upstream backend {
 ```
 
 This approach ensures reliable service-to-service communication within the container environment, avoiding DNS resolution issues that can occur with variable-based proxy configurations.
+
+## 🧪 Testing
+
+The frontend includes comprehensive test coverage with multiple test suites covering all aspects of the user interface.
+
+### Test Coverage Overview
+
+- **24 test files** with comprehensive UI and integration tests
+- **Component tests** for all major UI components
+- **Page tests** for complete user workflows
+- **API integration tests** with mocked responses
+- **Accessibility tests** with jest-axe for WCAG compliance
+- **End-to-end workflow tests** simulating real user interactions
+
+### Test Categories
+
+**Component Testing:**
+- `EmptyState` - All empty state variations and interactions
+- `Layout` - Service registration and version management
+- `FigureForm` - Form validation, MFC scraping, image handling
+- Enhanced tests for existing components (FigureCard, FilterBar, etc.)
+
+**Page Integration Testing:**
+- `Login` - Authentication workflow and error handling
+- `Dashboard` - Statistics display and navigation
+- `FigureList` - Listing, filtering, and pagination
+- Complete user journey testing
+
+**API Integration Testing:**
+- Request/response interceptors
+- Authentication token management
+- Error handling and retry logic
+- All CRUD operations with mock data
+
+**Accessibility Testing:**
+- WCAG 2.1 AA compliance with jest-axe
+- Screen reader compatibility
+- Keyboard navigation support
+- Focus management
+
+### Test Structure
+
+```
+src/
+├── __tests__/
+│   ├── App.test.tsx              # Main app routing tests
+│   ├── accessibility.test.tsx     # Comprehensive a11y tests
+│   ├── e2e-workflows.test.tsx     # End-to-end user workflows
+│   └── test-runner.js             # Test runner helper
+├── components/__tests__/
+│   ├── EmptyState.test.tsx        # Empty state component tests
+│   ├── Layout.test.tsx            # Layout and version management
+│   └── FigureForm.enhanced.test.tsx # Enhanced form tests
+├── pages/__tests__/
+│   ├── Login.test.tsx             # Login page tests
+│   ├── Dashboard.test.tsx         # Dashboard integration tests
+│   └── FigureList.test.tsx        # Figure listing tests
+├── api/__tests__/
+│   └── index.enhanced.test.ts     # API integration tests
+├── setupTests.ts                  # Test configuration
+├── test-utils.tsx                 # Testing utilities and mocks
+└── TESTING_SUMMARY.md            # Detailed testing documentation
+```
+
+### Running Tests
+
+```bash
+# WSL Setup Required: Install Node.js via NVM (see ../WSL_TEST_FIX_SOLUTION.md)
+
+# Install dependencies (including jest-axe for accessibility)
+npm install
+npm install --save-dev jest-axe
+
+# Run all tests
+npm test
+
+# Run with coverage report
+npm test -- --coverage --watchAll=false
+
+# Run in watch mode (development)
+npm test -- --watch
+
+# Run specific test suite
+npm test EmptyState.test.tsx
+
+# Run accessibility tests only
+npm test accessibility.test.tsx
+```
+
+### Test Configuration
+
+- **Framework**: Jest (via react-scripts)
+- **Testing Library**: React Testing Library for component testing
+- **User Events**: @testing-library/user-event for realistic interactions
+- **Accessibility**: jest-axe for automated accessibility testing
+- **Mocking**: Comprehensive mocks for API, stores, and external dependencies
+
+### Key Testing Features
+
+**Realistic User Interactions:**
+```typescript
+// Example: Testing form submission
+const nameInput = screen.getByLabelText(/figure name/i);
+const submitButton = screen.getByRole('button', { name: /save figure/i });
+
+await user.type(nameInput, 'Nendoroid Hatsune Miku');
+await user.click(submitButton);
+
+expect(mockCreateFigure).toHaveBeenCalledWith({
+  name: 'Nendoroid Hatsune Miku',
+  // ... other fields
+});
+```
+
+**Accessibility Testing:**
+```typescript
+// Example: Accessibility compliance check
+const { container } = render(<FigureForm />);
+const results = await axe(container);
+expect(results).toHaveNoViolations();
+```
+
+**API Integration Testing:**
+```typescript
+// Example: Testing API error handling
+mockApiCall.mockRejectedValueOnce(new Error('Network error'));
+render(<FigureList />);
+
+expect(await screen.findByText(/failed to load figures/i)).toBeInTheDocument();
+```
+
+### Mock Data and Utilities
+
+Consistent test data from `test-utils.tsx`:
+
+```typescript
+export const mockUser = {
+  id: '1',
+  email: 'test@example.com',
+  username: 'testuser'
+};
+
+export const mockFigure = {
+  id: '1',
+  name: 'Test Figure',
+  manufacturer: 'Test Company',
+  series: 'Test Series',
+  scale: '1/8',
+  price: 15000
+};
+```
+
+### Development Testing
+
+```bash
+# Watch mode for development
+npm test -- --watch
+
+# Test specific component during development
+npm test FigureForm --watch
+
+# Debug tests with more verbose output
+npm test -- --verbose
+```
+
+### CI/CD Integration
+
+```bash
+# CI test command
+npm test -- --coverage --watchAll=false
+
+# Coverage thresholds configured in package.json
+{
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 85,
+        "functions": 85,
+        "lines": 85,
+        "statements": 85
+      }
+    }
+  }
+}
+```
+
+### Testing Best Practices
+
+1. **Component Isolation**: Each component tested independently
+2. **User-Centric**: Tests focus on user behavior, not implementation
+3. **Accessibility First**: All interactive elements tested for a11y
+4. **Error Scenarios**: Comprehensive error handling tests
+5. **Performance**: Tests verify no performance regressions
+6. **Mobile Support**: Responsive design testing included
+
+### Additional Testing Resources
+
+See `TESTING_SUMMARY.md` for detailed testing documentation including:
+- Complete test coverage breakdown
+- Testing strategy and methodology
+- Troubleshooting guide
+- Best practices and guidelines
+
+## Development

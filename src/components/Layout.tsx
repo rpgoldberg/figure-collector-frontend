@@ -53,21 +53,23 @@ const Layout: React.FC = () => {
   }, []);
 
   return (
-    <Box minH="100vh" display="flex" flexDirection="column">
-      <Navbar />
+    <Box data-testid="layout" minH="100vh" display="flex" flexDirection="column">
+      <Box data-testid="navbar">
+        <Navbar />
+      </Box>
       <Container maxW="container.xl" pt={5} pb={10} flex="1">
         <Box display="flex" gap={5}>
-          <Box w="250px" display={{ base: 'none', md: 'block' }}>
+          <Box data-testid="sidebar" w="250px" display={{ base: 'none', md: 'block' }}>
             <Sidebar />
           </Box>
-          <Box flex="1">
+          <Box data-testid="outlet" flex="1">
             <Outlet />
           </Box>
         </Box>
       </Container>
       
       {/* Footer with version info */}
-      <Box as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
+      <Box data-testid="footer" role="contentinfo" as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
         <Container maxW="container.xl">
           <Flex justify="space-between" align="center">
             <Text fontSize="sm" color="gray.600">

@@ -1,4 +1,18 @@
-import axios from 'axios';
+import { useAuthStore } from '../../stores/authStore';
+import { mockUser, mockFigure, mockPaginatedResponse, mockStatsData } from '../../test-utils';
+import { FigureFormData } from '../../types';
+
+// Mock the auth store
+jest.mock('../../stores/authStore');
+
+// Get the global mock instance from setupTests
+declare const global: {
+  mockApiInstance: any;
+};
+
+const mockApiInstance = global.mockApiInstance;
+
+// Import the API functions
 import {
   loginUser,
   registerUser,
@@ -13,16 +27,6 @@ import {
   filterFigures,
   getFigureStats,
 } from '../index';
-import { useAuthStore } from '../../stores/authStore';
-import { mockUser, mockFigure, mockPaginatedResponse, mockStatsData } from '../../test-utils';
-import { FigureFormData } from '../../types';
-
-// Mock axios
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
-
-// Mock the auth store
-jest.mock('../../stores/authStore');
 
 describe('API Functions', () => {
   const mockGetState = jest.fn();
@@ -43,15 +47,6 @@ describe('API Functions', () => {
       logout: mockLogout,
     });
 
-    // Mock axios create method
-    mockedAxios.create = jest.fn(() => ({
-      ...mockedAxios,
-      interceptors: {
-        request: { use: jest.fn() },
-        response: { use: jest.fn() },
-      },
-    })) as any;
-
     // Mock window.location
     Object.defineProperty(window, 'location', {
       value: { href: '' },
@@ -67,12 +62,12 @@ describe('API Functions', () => {
           data: mockUser,
         };
         
-        mockedAxios.post.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.post.mockResolvedValueOnce({ data: responseData });
         
         const result = await loginUser('test@example.com', 'password123');
         
         expect(result).toEqual(mockUser);
-        expect(mockedAxios.post).toHaveBeenCalledWith('/users/login', {
+        expect(mockApiInstance.post).toHaveBeenCalledWith('/users/login', {
           email: 'test@example.com',
           password: 'password123',
         });
@@ -86,7 +81,7 @@ describe('API Functions', () => {
           },
         };
         
-        mockedAxios.post.mockRejectedValueOnce(errorResponse);
+        mockApiInstance.post.mockRejectedValueOnce(errorResponse);
         
         await expect(loginUser('test@example.com', 'wrongpassword'))
           .rejects
@@ -101,12 +96,12 @@ describe('API Functions', () => {
           data: mockUser,
         };
         
-        mockedAxios.post.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.post.mockResolvedValueOnce({ data: responseData });
         
         const result = await registerUser('testuser', 'test@example.com', 'password123');
         
         expect(result).toEqual(mockUser);
-        expect(mockedAxios.post).toHaveBeenCalledWith('/users/register', {
+        expect(mockApiInstance.post).toHaveBeenCalledWith('/users/register', {
           username: 'testuser',
           email: 'test@example.com',
           password: 'password123',
@@ -121,12 +116,12 @@ describe('API Functions', () => {
           data: mockUser,
         };
         
-        mockedAxios.get.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
         
         const result = await getUserProfile();
         
         expect(result).toEqual(mockUser);
-        expect(mockedAxios.get).toHaveBeenCalledWith('/users/profile');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/users/profile');
       });
     });
 
@@ -138,12 +133,12 @@ describe('API Functions', () => {
           data: updatedUser,
         };
         
-        mockedAxios.put.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.put.mockResolvedValueOnce({ data: responseData });
         
         const result = await updateUserProfile({ username: 'updateduser' });
         
         expect(result).toEqual(updatedUser);
-        expect(mockedAxios.put).toHaveBeenCalledWith('/users/profile', { username: 'updateduser' });
+        expect(mockApiInstance.put).toHaveBeenCalledWith('/users/profile', { username: 'updateduser' });
       });
     });
   });
@@ -151,21 +146,21 @@ describe('API Functions', () => {
   describe('Figures API', () => {
     describe('getFigures', () => {
       it('should get figures with default pagination', async () => {
-        mockedAxios.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
+        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
         
         const result = await getFigures();
         
         expect(result).toEqual(mockPaginatedResponse);
-        expect(mockedAxios.get).toHaveBeenCalledWith('/figures?page=1&limit=10');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures?page=1&limit=10');
       });
 
       it('should get figures with custom pagination', async () => {
-        mockedAxios.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
+        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
         
         const result = await getFigures(2, 5);
         
         expect(result).toEqual(mockPaginatedResponse);
-        expect(mockedAxios.get).toHaveBeenCalledWith('/figures?page=2&limit=5');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures?page=2&limit=5');
       });
     });
 
@@ -176,12 +171,12 @@ describe('API Functions', () => {
           data: mockFigure,
         };
         
-        mockedAxios.get.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
         
         const result = await getFigureById(mockFigure._id);
         
         expect(result).toEqual(mockFigure);
-        expect(mockedAxios.get).toHaveBeenCalledWith(`/figures/${mockFigure._id}`);
+        expect(mockApiInstance.get).toHaveBeenCalledWith(`/figures/${mockFigure._id}`);
       });
 
       it('should handle figure not found', async () => {
@@ -189,7 +184,7 @@ describe('API Functions', () => {
           response: { status: 404 },
         };
         
-        mockedAxios.get.mockRejectedValueOnce(errorResponse);
+        mockApiInstance.get.mockRejectedValueOnce(errorResponse);
         
         await expect(getFigureById('invalid-id'))
           .rejects
@@ -214,12 +209,12 @@ describe('API Functions', () => {
           data: mockFigure,
         };
         
-        mockedAxios.post.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.post.mockResolvedValueOnce({ data: responseData });
         
         const result = await createFigure(figureFormData);
         
         expect(result).toEqual(mockFigure);
-        expect(mockedAxios.post).toHaveBeenCalledWith('/figures', figureFormData);
+        expect(mockApiInstance.post).toHaveBeenCalledWith('/figures', figureFormData);
       });
     });
 
@@ -238,22 +233,22 @@ describe('API Functions', () => {
           data: updatedFigure,
         };
         
-        mockedAxios.put.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.put.mockResolvedValueOnce({ data: responseData });
         
         const result = await updateFigure(mockFigure._id, updatedData);
         
         expect(result).toEqual(updatedFigure);
-        expect(mockedAxios.put).toHaveBeenCalledWith(`/figures/${mockFigure._id}`, updatedData);
+        expect(mockApiInstance.put).toHaveBeenCalledWith(`/figures/${mockFigure._id}`, updatedData);
       });
     });
 
     describe('deleteFigure', () => {
       it('should delete figure successfully', async () => {
-        mockedAxios.delete.mockResolvedValueOnce({ data: { success: true } });
+        mockApiInstance.delete.mockResolvedValueOnce({ data: { success: true } });
         
         await deleteFigure(mockFigure._id);
         
-        expect(mockedAxios.delete).toHaveBeenCalledWith(`/figures/${mockFigure._id}`);
+        expect(mockApiInstance.delete).toHaveBeenCalledWith(`/figures/${mockFigure._id}`);
       });
 
       it('should handle delete error', async () => {
@@ -261,7 +256,7 @@ describe('API Functions', () => {
           response: { status: 403 },
         };
         
-        mockedAxios.delete.mockRejectedValueOnce(errorResponse);
+        mockApiInstance.delete.mockRejectedValueOnce(errorResponse);
         
         await expect(deleteFigure(mockFigure._id))
           .rejects
@@ -289,22 +284,22 @@ describe('API Functions', () => {
           data: searchResults,
         };
         
-        mockedAxios.get.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
         
         const result = await searchFigures('Hatsune Miku');
         
         expect(result).toEqual(searchResults);
-        expect(mockedAxios.get).toHaveBeenCalledWith('/figures/search?query=Hatsune%20Miku');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/search?query=Hatsune%20Miku');
       });
 
       it('should encode special characters in search query', async () => {
         const responseData = { success: true, data: [] };
         
-        mockedAxios.get.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
         
         await searchFigures('test & search');
         
-        expect(mockedAxios.get).toHaveBeenCalledWith('/figures/search?query=test%20%26%20search');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/search?query=test%20%26%20search');
       });
     });
 
@@ -321,12 +316,12 @@ describe('API Functions', () => {
         
         const expectedUrl = '/figures/filter?manufacturer=Good%20Smile%20Company&scale=1%2F8&location=Display%20Case%20A&boxNumber=A1&page=1&limit=10';
         
-        mockedAxios.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
+        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
         
         const result = await filterFigures(filterParams);
         
         expect(result).toEqual(mockPaginatedResponse);
-        expect(mockedAxios.get).toHaveBeenCalledWith(expectedUrl);
+        expect(mockApiInstance.get).toHaveBeenCalledWith(expectedUrl);
       });
 
       it('should filter figures with partial parameters', async () => {
@@ -337,21 +332,21 @@ describe('API Functions', () => {
         
         const expectedUrl = '/figures/filter?manufacturer=Good%20Smile%20Company&page=2';
         
-        mockedAxios.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
+        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
         
         const result = await filterFigures(filterParams);
         
         expect(result).toEqual(mockPaginatedResponse);
-        expect(mockedAxios.get).toHaveBeenCalledWith(expectedUrl);
+        expect(mockApiInstance.get).toHaveBeenCalledWith(expectedUrl);
       });
 
       it('should handle empty filter parameters', async () => {
-        mockedAxios.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
+        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
         
         const result = await filterFigures({});
         
         expect(result).toEqual(mockPaginatedResponse);
-        expect(mockedAxios.get).toHaveBeenCalledWith('/figures/filter?');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/filter?');
       });
     });
 
@@ -362,12 +357,12 @@ describe('API Functions', () => {
           data: mockStatsData,
         };
         
-        mockedAxios.get.mockResolvedValueOnce({ data: responseData });
+        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
         
         const result = await getFigureStats();
         
         expect(result).toEqual(mockStatsData);
-        expect(mockedAxios.get).toHaveBeenCalledWith('/figures/stats');
+        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/stats');
       });
 
       it('should handle stats error', async () => {
@@ -375,7 +370,7 @@ describe('API Functions', () => {
           response: { status: 500 },
         };
         
-        mockedAxios.get.mockRejectedValueOnce(errorResponse);
+        mockApiInstance.get.mockRejectedValueOnce(errorResponse);
         
         await expect(getFigureStats())
           .rejects

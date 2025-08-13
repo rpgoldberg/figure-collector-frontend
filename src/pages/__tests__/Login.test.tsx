@@ -23,12 +23,9 @@ jest.mock('react-router-dom', () => ({
   Link: ({ children, to }: any) => <a href={to}>{children}</a>,
 }));
 
-// Mock toast
+// Mock toast - use the global mock
 const mockToast = jest.fn();
-jest.mock('@chakra-ui/react', () => ({
-  ...jest.requireActual('@chakra-ui/react'),
-  useToast: () => mockToast,
-}));
+global.mockToast = mockToast;
 
 describe('Login', () => {
   const mockSetUser = jest.fn();

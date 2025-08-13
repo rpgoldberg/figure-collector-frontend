@@ -30,7 +30,7 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'json-summary'],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '^axios$': '<rootDir>/node_modules/axios/index.js',
+    '^axios$': '<rootDir>/node_modules/axios/dist/node/axios.cjs',
     '^@chakra-ui/react$': '<rootDir>/node_modules/@chakra-ui/react',
     '^@chakra-ui/(.*)$': '<rootDir>/node_modules/@chakra-ui/$1',
     '@chakra-ui/utils/context': '<rootDir>/node_modules/@chakra-ui/utils/dist/context',

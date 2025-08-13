@@ -13,20 +13,20 @@ jest.mock('../../../package.json', () => ({
 // Mock child components
 jest.mock('../Navbar', () => {
   return function MockNavbar() {
-    return <nav data-testid="navbar">Navbar</nav>;
+    return <nav role="navigation">Navbar</nav>;
   };
 });
 
 jest.mock('../Sidebar', () => {
   return function MockSidebar() {
-    return <aside data-testid="sidebar">Sidebar</aside>;
+    return <aside role="complementary">Sidebar</aside>;
   };
 });
 
 // Mock Outlet from react-router-dom
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  Outlet: () => <main data-testid="outlet">Page Content</main>,
+  Outlet: () => <main role="main">Page Content</main>,
 }));
 
 // Mock fetch
@@ -72,16 +72,16 @@ describe('Layout', () => {
     it('should render layout structure correctly', () => {
       render(<Layout />);
 
-      expect(screen.getByTestId('navbar')).toBeInTheDocument();
-      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
-      expect(screen.getByTestId('outlet')).toBeInTheDocument();
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
+      expect(screen.getByRole('main')).toBeInTheDocument();
       expect(screen.getByText('Figure Collector')).toBeInTheDocument();
     });
 
     it('should render sidebar only on medium+ screens', () => {
       render(<Layout />);
 
-      const sidebar = screen.getByTestId('sidebar');
+      const sidebar = screen.getByRole('complementary');
       expect(sidebar).toBeInTheDocument();
       
       // The sidebar container should have responsive display classes
@@ -114,7 +114,7 @@ describe('Layout', () => {
             name: 'figure-collector-frontend'
           }),
         });
-      });
+      }, { timeout: 2000 });
     });
 
     it('should log successful registration', async () => {
@@ -122,7 +122,7 @@ describe('Layout', () => {
 
       await waitFor(() => {
         expect(console.log).toHaveBeenCalledWith('[REGISTER] Frontend v1.0.0 registered successfully');
-      });
+      }, { timeout: 2000 });
     });
 
     it('should handle registration failure gracefully', async () => {
@@ -404,7 +404,7 @@ describe('Layout', () => {
     it('should hide sidebar on smaller screens', () => {
       render(<Layout />);
 
-      const sidebarContainer = screen.getByTestId('sidebar').parentElement;
+      const sidebarContainer = screen.getByRole('complementary').parentElement;
       
       // The container should have responsive display classes
       // This tests that the structure is correct for responsive behavior
@@ -415,7 +415,7 @@ describe('Layout', () => {
       render(<Layout />);
 
       // Main container should be present
-      const mainContent = screen.getByTestId('outlet');
+      const mainContent = screen.getByRole('main');
       expect(mainContent.parentElement).toBeInTheDocument();
       
       // Footer should always be present

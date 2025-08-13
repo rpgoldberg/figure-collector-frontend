@@ -1,4 +1,5 @@
 // Extend Jest matchers and add accessibility testing
+import React from 'react';
 import '@testing-library/jest-dom';
 import 'jest-axe/extend-expect';
 import { configure } from '@testing-library/react';
@@ -12,37 +13,40 @@ configure({
 });
 
 // Global mocks and test configuration
-// Mock the entire @chakra-ui/react package with more robust implementation
-jest.mock('@chakra-ui/react', () => ({
-  ChakraProvider: jest.fn(({ children }) => children),
-  useColorMode: jest.fn(() => ({
-    colorMode: 'light',
-    toggleColorMode: jest.fn(),
-  })),
-  useBreakpointValue: jest.fn((value) => value.base),
-  Checkbox: jest.fn(({ children, ...props }) => children),
-  Button: jest.fn(({ children, ...props }) => children),
-  useToast: jest.fn(() => jest.fn()),
-  useDisclosure: jest.fn(() => ({
-    isOpen: false,
-    onOpen: jest.fn(),
-    onClose: jest.fn(),
-    onToggle: jest.fn()
-  })),
-  Text: jest.fn(({ children }) => children),
-  VStack: jest.fn(({ children }) => children),
-  HStack: jest.fn(({ children }) => children),
-  Box: jest.fn(({ children }) => children),
-  Flex: jest.fn(({ children }) => children),
-  Spacer: jest.fn(() => null),
-  Center: jest.fn(({ children }) => children),
-  useColorModeValue: jest.fn((light) => light),
-  Tooltip: jest.fn(({ children }) => children),
-  Menu: jest.fn(({ children }) => children),
-  MenuButton: jest.fn(({ children }) => children),
-  MenuList: jest.fn(({ children }) => children),
-  MenuItem: jest.fn(({ children }) => children),
+// Mock axios first to avoid ES module issues
+const mockApiInstance = {
+  get: jest.fn(),
+  post: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn(),
+  patch: jest.fn(),
+  interceptors: {
+    request: { use: jest.fn() },
+    response: { use: jest.fn() },
+  },
+};
+
+jest.mock('axios', () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn(() => mockApiInstance),
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+    patch: jest.fn(),
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() },
+    },
+  },
 }));
+
+// Make mockApiInstance globally available
+global.mockApiInstance = mockApiInstance;
+
+// Simplified Chakra UI mock - only mock what's absolutely necessary
+// Don't mock the entire package as it causes more issues than it solves
 
 // Mock window.confirm for delete operations
 Object.defineProperty(window, 'confirm', {

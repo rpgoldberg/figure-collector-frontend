@@ -22,3 +22,7 @@ yarn-error.log*
 
 # Serena cache
 .serena/
+
+# Temporary test files
+src/components/__tests__/Layout.basic.test.tsx
+src/components/__tests__/Layout.simple.test.tsx

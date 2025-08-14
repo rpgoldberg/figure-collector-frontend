@@ -14,4 +14,3 @@ describe('Application Accessibility', () => {
     expect(results).toHaveNoViolations();
   });
 });
-EOL < /dev/null

@@ -89,6 +89,52 @@ const renderAsync = async (
   return result;
 };
 
+// Error boundary test helper
+class TestErrorBoundary extends React.Component<
+  { children: React.ReactNode; onError?: (error: Error) => void },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode; onError?: (error: Error) => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error boundary caught:', error, errorInfo);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div data-testid="error-boundary">Something went wrong: {this.state.error?.message}</div>;
+    }
+
+    return this.props.children;
+  }
+}
+
+// Render with error boundary for testing undefined data scenarios
+const renderWithErrorBoundary = (
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'> & { 
+    initialRoutes?: string[];
+    onError?: (error: Error) => void;
+  }
+) => {
+  const { onError, ...renderOptions } = options || {};
+  
+  return customRender(
+    <TestErrorBoundary onError={onError}>
+      {ui}
+    </TestErrorBoundary>,
+    renderOptions
+  );
+};
+
 // Mock data exports
 export const mockUser = {
   id: '1',
@@ -145,5 +191,6 @@ export const mockPaginatedResponse = {
 };
 
 export * from '@testing-library/react';
-export { customRender as render, renderAsync };
-export { screen } from '@testing-library/react';
+export { customRender as render, renderAsync, renderWithErrorBoundary, TestErrorBoundary };
+export { screen, waitFor, fireEvent, act } from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';

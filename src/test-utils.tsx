@@ -29,7 +29,8 @@ const AllProviders = ({ children, initialRoutes = ['/'] }: {
   initialRoutes?: string[] 
 }) => {
   // Mock services and registration
-  jest.spyOn(global, 'fetch').mockImplementation((url: string) => {
+  jest.spyOn(global, 'fetch').mockImplementation((input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
     if (url === '/register-service') {
       return Promise.resolve({
         ok: true,

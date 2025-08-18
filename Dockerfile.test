@@ -1,0 +1,21 @@
+FROM node:24-alpine
+
+WORKDIR /app
+
+# Install bash for test scripts
+RUN apk add --no-cache bash
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies for testing)
+RUN npm install
+
+# Copy source code and tests
+COPY . .
+
+# Ensure test output directory exists
+RUN mkdir -p /app/test-output
+
+# Default test command
+CMD ["npm", "test", "--", "--coverage", "--watchAll=false"]

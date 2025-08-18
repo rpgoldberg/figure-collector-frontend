@@ -12,8 +12,8 @@ RUN npm run build
 
 FROM nginx:alpine
 
-# Install envsubst for environment variable substitution
-RUN apk add --no-cache gettext
+# Install envsubst for environment variable substitution and curl for health checks
+RUN apk add --no-cache gettext curl
 
 COPY --from=build /app/build /usr/share/nginx/html
 
@@ -22,12 +22,12 @@ COPY --from=build /app/build /usr/share/nginx/html
 # Copy nginx template
 COPY nginx/nginx.conf.template /etc/nginx/templates/default.conf.template
 
-# Set default environment variables
+# Default environment variables (will be overridden by Docker Compose)
 ENV BACKEND_HOST=figure-collector-backend
 ENV BACKEND_PORT=5050
 ENV FRONTEND_PORT=5051
 
-EXPOSE ${FRONTEND_PORT}
+# EXPOSE will be handled by Docker Compose port mapping
 
 # Use nginx's built-in template substitution
 CMD ["nginx", "-g", "daemon off;"]

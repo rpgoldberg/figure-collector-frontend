@@ -30,3 +30,6 @@ src/components/__tests__/Layout.simple.test.tsx
 # Claude configuration
 .claude/
 CLAUDE.md
+
+# Git helper scripts
+git_command.sh

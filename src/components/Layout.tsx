@@ -26,10 +26,11 @@ const Layout: React.FC = () => {
           }),
         });
         
+        const responseData = await response.json();
         if (response.ok) {
           console.log(`[REGISTER] Frontend v${packageJson.version} registered successfully`);
         } else {
-          console.warn('[REGISTER] Failed to register frontend service');
+          console.warn('[REGISTER] Failed to register frontend service', responseData);
         }
       } catch (error) {
         console.error('[REGISTER] Error registering frontend service:', error);
@@ -41,13 +42,21 @@ const Layout: React.FC = () => {
       // Wait a brief moment for registration to complete
       setTimeout(() => {
         fetch('/version')
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+          })
           .then(data => {
             setVersionInfo(data);
             // Console log for developers
             console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
           })
-          .catch(err => console.error('Failed to fetch version info:', err));
+          .catch(err => {
+            console.error('Failed to fetch version info:', err);
+            setVersionInfo(null);
+          });
       }, 100);
     });
   }, []);

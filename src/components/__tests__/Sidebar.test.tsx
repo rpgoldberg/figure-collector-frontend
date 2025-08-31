@@ -71,7 +71,7 @@ describe('Sidebar', () => {
 
       const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
       expect(dashboardLink).toHaveClass('chakra-link');
-      expect(dashboardLink).toHaveStyle({ fontWeight: 'medium' });
+      expect(dashboardLink).toHaveAttribute('data-active', 'true');
     });
 
     it('should highlight figures page as active', () => {
@@ -79,7 +79,7 @@ describe('Sidebar', () => {
       render(<Sidebar />);
 
       const figuresLink = screen.getByRole('link', { name: /all figures/i });
-      expect(figuresLink).toHaveStyle({ fontWeight: 'medium' });
+      expect(figuresLink).toHaveAttribute('data-active', 'true');
     });
 
     it('should highlight add figure page as active', () => {
@@ -87,7 +87,7 @@ describe('Sidebar', () => {
       render(<Sidebar />);
 
       const addFigureLink = screen.getByRole('link', { name: /add figure/i });
-      expect(addFigureLink).toHaveStyle({ fontWeight: 'medium' });
+      expect(addFigureLink).toHaveAttribute('data-active', 'true');
     });
 
     it('should highlight search page as active', () => {
@@ -95,7 +95,7 @@ describe('Sidebar', () => {
       render(<Sidebar />);
 
       const searchLink = screen.getByRole('link', { name: /search/i });
-      expect(searchLink).toHaveStyle({ fontWeight: 'medium' });
+      expect(searchLink).toHaveAttribute('data-active', 'true');
     });
 
     it('should highlight statistics page as active', () => {
@@ -103,7 +103,7 @@ describe('Sidebar', () => {
       render(<Sidebar />);
 
       const statsLink = screen.getByRole('link', { name: /statistics/i });
-      expect(statsLink).toHaveStyle({ fontWeight: 'medium' });
+      expect(statsLink).toHaveAttribute('data-active', 'true');
     });
 
     it('should highlight profile page as active', () => {
@@ -111,7 +111,7 @@ describe('Sidebar', () => {
       render(<Sidebar />);
 
       const profileLink = screen.getByRole('link', { name: /profile/i });
-      expect(profileLink).toHaveStyle({ fontWeight: 'medium' });
+      expect(profileLink).toHaveAttribute('data-active', 'true');
     });
 
     it('should not highlight any item when on unknown page', () => {
@@ -120,7 +120,7 @@ describe('Sidebar', () => {
 
       const allLinks = screen.getAllByRole('link');
       allLinks.forEach(link => {
-        expect(link).toHaveStyle({ fontWeight: 'normal' });
+        expect(link).toHaveAttribute('data-active', 'false');
       });
     });
 
@@ -131,8 +131,8 @@ describe('Sidebar', () => {
       const figuresLink = screen.getByRole('link', { name: /all figures/i });
       const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
 
-      expect(figuresLink).toHaveStyle({ fontWeight: 'medium' });
-      expect(dashboardLink).toHaveStyle({ fontWeight: 'normal' });
+      expect(figuresLink).toHaveAttribute('data-active', 'true');
+      expect(dashboardLink).toHaveAttribute('data-active', 'false');
     });
   });
 
@@ -272,17 +272,17 @@ describe('Sidebar', () => {
       // Should not highlight any item for nested routes that don't exactly match
       const allLinks = screen.getAllByRole('link');
       allLinks.forEach(link => {
-        expect(link).toHaveStyle({ fontWeight: 'normal' });
+        expect(link).toHaveAttribute('data-active', 'false');
       });
     });
 
     it('should handle query parameters', () => {
-      mockUseLocation.mockReturnValue({ pathname: '/search?query=miku' });
+      mockUseLocation.mockReturnValue({ pathname: '/search', search: '?query=miku' });
       render(<Sidebar />);
 
-      // Should not match due to exact path comparison
+      // Should match /search regardless of query parameters
       const searchLink = screen.getByRole('link', { name: /search/i });
-      expect(searchLink).toHaveStyle({ fontWeight: 'normal' });
+      expect(searchLink).toHaveAttribute('data-active', 'true');
     });
   });
 });

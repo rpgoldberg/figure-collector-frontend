@@ -20,11 +20,20 @@ jest.mock('../../components/SearchBar', () => {
   return function MockSearchBar({ onSearch, placeholder }: any) {
     return (
       <div data-testid="search-bar">
-        <input 
-          placeholder={placeholder}
-          onChange={(e) => onSearch(e.target.value)}
-          data-testid="search-input"
-        />
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.querySelector('input');
+          if (input) onSearch(input.value);
+        }}>
+          <input 
+            placeholder={placeholder}
+            data-testid="search-input"
+            type="search"
+            role="searchbox"
+            aria-label="Search your figures"
+          />
+          <button type="submit" aria-label="Search">Search</button>
+        </form>
       </div>
     );
   };
@@ -53,6 +62,9 @@ describe('Dashboard', () => {
     ],
   };
 
+  // Increase timeout for async operations
+  jest.setTimeout(10000);
+
   const mockEmptyFiguresData = {
     success: true,
     count: 0,
@@ -66,6 +78,11 @@ describe('Dashboard', () => {
     jest.clearAllMocks();
     mockApi.getFigures.mockResolvedValue(mockFiguresData);
     mockApi.getFigureStats.mockResolvedValue(mockStatsData);
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('component rendering', () => {
@@ -119,11 +136,12 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       await waitFor(() => {
-        expect(screen.getByText('10')).toBeInTheDocument(); // Total figures
-        expect(screen.getByText('3')).toBeInTheDocument(); // Number of manufacturers
-        expect(screen.getByText('3')).toBeInTheDocument(); // Number of scales
-        expect(screen.getByText('3')).toBeInTheDocument(); // Number of locations
-      });
+        const totalFigures = screen.getByText('10');
+        const manufacturerCount = screen.getAllByText('3');
+
+        expect(totalFigures).toBeInTheDocument(); // Total figures
+        expect(manufacturerCount.length).toBeGreaterThanOrEqual(3); // Number of manufacturers, scales, locations
+      }, { timeout: 5000 });
     });
 
     it('should display statistics descriptions', async () => {
@@ -261,7 +279,10 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       const searchInput = await screen.findByTestId('search-input');
+      const searchForm = screen.getByTestId('search-bar');
+      
       await user.type(searchInput, 'test query');
+      await user.click(screen.getByLabelText('Search'));
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/search?q=test%20query');

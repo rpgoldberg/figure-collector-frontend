@@ -35,7 +35,7 @@ describe('FigureForm', () => {
       expect(screen.getByLabelText(/myfigurecollection link/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/manufacturer/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/figure name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/scale/i)).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /scale/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/storage location/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/box number/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/image url/i)).toBeInTheDocument();
@@ -92,11 +92,18 @@ describe('FigureForm', () => {
 
       const mfcInput = screen.getByLabelText(/myfigurecollection link/i);
       await user.type(mfcInput, 'invalid-url');
-      await user.tab(); // Trigger validation
+      
+      // Fill required fields to trigger validation
+      await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
+      await user.type(screen.getByLabelText(/figure name/i), 'Test Figure');
+      
+      // Submit to trigger validation
+      const submitButton = screen.getByRole('button', { name: /add figure/i });
+      await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/please enter a valid url/i)).toBeInTheDocument();
-      });
+        expect(screen.getByText('Please enter a valid URL')).toBeInTheDocument();
+      }, { timeout: 1000 });
     });
 
     it('should validate URL format for image URL', async () => {
@@ -105,11 +112,18 @@ describe('FigureForm', () => {
 
       const imageUrlInput = screen.getByLabelText(/image url/i);
       await user.type(imageUrlInput, 'invalid-url');
-      await user.tab(); // Trigger validation
+      
+      // Fill required fields to trigger validation
+      await user.type(screen.getByLabelText(/manufacturer/i), 'Test Manufacturer');
+      await user.type(screen.getByLabelText(/figure name/i), 'Test Figure');
+      
+      // Submit to trigger validation
+      const submitButton = screen.getByRole('button', { name: /add figure/i });
+      await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/please enter a valid url/i)).toBeInTheDocument();
-      });
+        expect(screen.getByText('Please enter a valid URL')).toBeInTheDocument();
+      }, { timeout: 1000 });
     });
 
     it('should allow empty optional fields', async () => {
@@ -133,9 +147,10 @@ describe('FigureForm', () => {
             location: '',
             boxNumber: '',
             imageUrl: '',
-          })
+          }),
+          expect.any(Object)
         );
-      });
+      }, { timeout: 1000 });
     });
   });
 
@@ -157,7 +172,7 @@ describe('FigureForm', () => {
       // Fill out the form
       await user.type(screen.getByLabelText(/manufacturer/i), formData.manufacturer);
       await user.type(screen.getByLabelText(/figure name/i), formData.name);
-      await user.type(screen.getByLabelText(/scale/i), formData.scale);
+      await user.type(screen.getByRole('textbox', { name: /scale/i }), formData.scale);
       await user.type(screen.getByLabelText(/myfigurecollection link/i), formData.mfcLink!);
       await user.type(screen.getByLabelText(/storage location/i), formData.location!);
       await user.type(screen.getByLabelText(/box number/i), formData.boxNumber!);
@@ -167,7 +182,7 @@ describe('FigureForm', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(formData);
+        expect(mockOnSubmit).toHaveBeenCalledWith(formData, expect.any(Object));
       });
     });
 
@@ -190,7 +205,7 @@ describe('FigureForm', () => {
       const user = userEvent.setup();
       render(<FigureForm {...defaultProps} />);
 
-      const scaleInput = screen.getByLabelText(/scale/i);
+      const scaleInput = screen.getByRole('textbox', { name: /scale/i });
       await user.type(scaleInput, '0.125');
       await user.tab(); // Trigger onBlur
 
@@ -203,7 +218,7 @@ describe('FigureForm', () => {
       const user = userEvent.setup();
       render(<FigureForm {...defaultProps} />);
 
-      const scaleInput = screen.getByLabelText(/scale/i);
+      const scaleInput = screen.getByRole('textbox', { name: /scale/i });
       await user.type(scaleInput, '1/7');
       await user.tab(); // Trigger onBlur
 
@@ -214,7 +229,7 @@ describe('FigureForm', () => {
       const user = userEvent.setup();
       render(<FigureForm {...defaultProps} />);
 
-      const scaleInput = screen.getByLabelText(/scale/i);
+      const scaleInput = screen.getByRole('textbox', { name: /scale/i });
       await user.type(scaleInput, 'Nendoroid');
       await user.tab(); // Trigger onBlur
 
@@ -416,7 +431,7 @@ describe('FigureForm', () => {
 
       expect(screen.getByLabelText(/manufacturer/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/figure name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/scale/i)).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /scale/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/storage location/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/box number/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/image url/i)).toBeInTheDocument();

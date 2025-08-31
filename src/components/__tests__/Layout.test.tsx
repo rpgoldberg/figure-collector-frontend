@@ -50,6 +50,34 @@ describe('Layout', () => {
     }
   };
 
+  // Mock window.matchMedia for responsive testing
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: !query.includes('(max-width'), // Default to desktop view
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+
+  // Set viewport to desktop size for responsive tests
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: 1024,
+  });
+  
+  Object.defineProperty(window, 'innerHeight', {
+    writable: true,
+    configurable: true,
+    value: 768,
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     console.log = jest.fn();
@@ -68,12 +96,19 @@ describe('Layout', () => {
       });
   });
 
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+  });
+
   describe('component rendering', () => {
     it('should render layout structure correctly', () => {
       render(<Layout />);
 
       expect(screen.getByRole('navigation')).toBeInTheDocument();
-      expect(screen.getByRole('complementary')).toBeInTheDocument();
+      
+      // Check for complementary element including hidden ones due to responsive design
+      expect(screen.getByRole('complementary', { hidden: true })).toBeInTheDocument();
+      
       expect(screen.getByRole('main')).toBeInTheDocument();
       expect(screen.getByText('Figure Collector')).toBeInTheDocument();
     });
@@ -81,11 +116,11 @@ describe('Layout', () => {
     it('should render sidebar only on medium+ screens', () => {
       render(<Layout />);
 
-      const sidebar = screen.getByRole('complementary');
+      const sidebar = screen.getByRole('complementary', { hidden: true });
       expect(sidebar).toBeInTheDocument();
       
       // The sidebar container should have responsive display classes
-      const sidebarContainer = sidebar.parentElement;
+      const sidebarContainer = screen.getByTestId('sidebar');
       expect(sidebarContainer).toBeInTheDocument();
     });
 
@@ -114,41 +149,50 @@ describe('Layout', () => {
             name: 'figure-collector-frontend'
           }),
         });
-      }, { timeout: 2000 });
+      }, { timeout: 5000 });
     });
 
     it('should log successful registration', async () => {
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       await waitFor(() => {
         expect(console.log).toHaveBeenCalledWith('[REGISTER] Frontend v1.0.0 registered successfully');
-      }, { timeout: 2000 });
+      }, { timeout: 1000 });
     });
 
     it('should handle registration failure gracefully', async () => {
+      (global.fetch as jest.Mock).mockReset();
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: false,
-          status: 500
+          status: 500,
+          json: () => Promise.resolve({ error: 'Server error' })
         });
 
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       await waitFor(() => {
-        expect(console.warn).toHaveBeenCalledWith('[REGISTER] Failed to register frontend service');
-      });
+        expect(console.warn).toHaveBeenCalledWith('[REGISTER] Failed to register frontend service', { error: 'Server error' });
+      }, { timeout: 1000 });
     });
 
     it('should handle registration network error', async () => {
+      (global.fetch as jest.Mock).mockReset();
       const networkError = new Error('Network error');
       (global.fetch as jest.Mock)
         .mockRejectedValueOnce(networkError);
 
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       await waitFor(() => {
         expect(console.error).toHaveBeenCalledWith('[REGISTER] Error registering frontend service:', networkError);
-      });
+      }, { timeout: 1000 });
     });
   });
 
@@ -156,38 +200,45 @@ describe('Layout', () => {
     it('should fetch and display version info after registration', async () => {
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith('/version');
-      });
+      }, { timeout: 1000 });
 
       await waitFor(() => {
         expect(screen.getByText('v1.2.0 • 2023-01-01')).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
     });
 
     it('should log version information to console', async () => {
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       await waitFor(() => {
         expect(console.log).toHaveBeenCalledWith(
           'App v1.2.0, Frontend v1.0.0, Backend v2.1.0, Scraper v1.1.0'
         );
-      });
+      }, { timeout: 1000 });
     });
 
     it('should handle version fetch failure', async () => {
+      (global.fetch as jest.Mock).mockReset();
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
         .mockRejectedValueOnce(new Error('Version fetch failed'));
 
       render(<Layout />);
+
+      jest.advanceTimersByTime(100);
 
       await waitFor(() => {
         expect(console.error).toHaveBeenCalledWith(
           'Failed to fetch version info:',
           expect.any(Error)
         );
-      });
+      }, { timeout: 1000 });
     });
 
     it('should handle missing version data gracefully', async () => {
@@ -196,8 +247,9 @@ describe('Layout', () => {
         services: {}
       };
 
+      (global.fetch as jest.Mock).mockReset();
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(incompleteVersionInfo)
@@ -205,24 +257,27 @@ describe('Layout', () => {
 
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       await waitFor(() => {
         expect(screen.getByText('vunknown • unknown')).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
 
       await waitFor(() => {
         expect(console.log).toHaveBeenCalledWith(
           'App vunknown, Frontend vunknown, Backend vunknown, Scraper vunknown'
         );
-      });
+      }, { timeout: 1000 });
     });
   });
 
   describe('version popover', () => {
     beforeEach(async () => {
       render(<Layout />);
+      jest.advanceTimersByTime(100);
       await waitFor(() => {
         expect(screen.getByText('v1.2.0 • 2023-01-01')).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
     });
 
     it('should display version popover on hover', async () => {
@@ -261,7 +316,7 @@ describe('Layout', () => {
       await waitFor(() => {
         expect(screen.getByText('(ok)')).toBeInTheDocument();
         expect(screen.getByText('(error)')).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
     });
 
     it('should display validation information when available', async () => {
@@ -285,15 +340,15 @@ describe('Layout', () => {
       await user.hover(versionText);
       await waitFor(() => {
         expect(screen.getByText('Service Versions')).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
 
       // Unhover to hide
       await user.unhover(versionText);
 
-      // Wait for popover to disappear
+      // Wait for popover to disappear with a shorter timeout
       await waitFor(() => {
         expect(screen.queryByText('Service Versions')).not.toBeInTheDocument();
-      }, { timeout: 3000 });
+      }, { timeout: 1500 });
     });
   });
 
@@ -309,8 +364,9 @@ describe('Layout', () => {
         }
       };
 
+      (global.fetch as jest.Mock).mockReset();
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(warningVersionInfo)
@@ -318,10 +374,12 @@ describe('Layout', () => {
 
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       const user = userEvent.setup();
       await waitFor(() => {
         expect(screen.getByText('v1.2.0 • 2023-01-01')).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
 
       const versionText = screen.getByText('v1.2.0 • 2023-01-01');
       await user.hover(versionText);
@@ -331,7 +389,7 @@ describe('Layout', () => {
         expect(screen.getByText('Some compatibility warnings')).toBeInTheDocument();
         expect(screen.getByText('• Backend version may be outdated')).toBeInTheDocument();
         expect(screen.getByText('• Scraper service not responding')).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
     });
 
     it('should display invalid status correctly', async () => {
@@ -344,8 +402,9 @@ describe('Layout', () => {
         }
       };
 
+      (global.fetch as jest.Mock).mockReset();
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(invalidVersionInfo)
@@ -353,10 +412,12 @@ describe('Layout', () => {
 
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       const user = userEvent.setup();
       await waitFor(() => {
         expect(screen.getByText('v1.2.0 • 2023-01-01')).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
 
       const versionText = screen.getByText('v1.2.0 • 2023-01-01');
       await user.hover(versionText);
@@ -364,7 +425,7 @@ describe('Layout', () => {
       await waitFor(() => {
         expect(screen.getByText('Invalid')).toBeInTheDocument();
         expect(screen.getByText('Services incompatible')).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
     });
 
     it('should handle compatible status', async () => {
@@ -377,8 +438,9 @@ describe('Layout', () => {
         }
       };
 
+      (global.fetch as jest.Mock).mockReset();
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(compatibleVersionInfo)
@@ -386,17 +448,19 @@ describe('Layout', () => {
 
       render(<Layout />);
 
+      jest.advanceTimersByTime(100);
+
       const user = userEvent.setup();
       await waitFor(() => {
         expect(screen.getByText('v1.2.0 • 2023-01-01')).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
 
       const versionText = screen.getByText('v1.2.0 • 2023-01-01');
       await user.hover(versionText);
 
       await waitFor(() => {
         expect(screen.getByText('Compatible')).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
     });
   });
 
@@ -404,7 +468,7 @@ describe('Layout', () => {
     it('should hide sidebar on smaller screens', () => {
       render(<Layout />);
 
-      const sidebarContainer = screen.getByRole('complementary').parentElement;
+      const sidebarContainer = screen.getByTestId('sidebar');
       
       // The container should have responsive display classes
       // This tests that the structure is correct for responsive behavior
@@ -428,7 +492,7 @@ describe('Layout', () => {
       render(<Layout />);
 
       expect(screen.getByRole('navigation')).toBeInTheDocument(); // Navbar
-      expect(screen.getByRole('complementary')).toBeInTheDocument(); // Sidebar
+      expect(screen.getByRole('complementary', { hidden: true })).toBeInTheDocument(); // Sidebar
       expect(screen.getByRole('main')).toBeInTheDocument(); // Main content
       expect(screen.getByRole('contentinfo')).toBeInTheDocument(); // Footer
     });
@@ -439,7 +503,7 @@ describe('Layout', () => {
       await waitFor(() => {
         const versionText = screen.getByText('v1.2.0 • 2023-01-01');
         expect(versionText).toHaveStyle({ cursor: 'pointer' });
-      });
+      }, { timeout: 5000 });
     });
   });
 

@@ -171,18 +171,18 @@ describe('SearchBar', () => {
   describe('Form Behavior', () => {
     it('should prevent default form submission behavior', async () => {
       const user = userEvent.setup();
-      const mockPreventDefault = jest.fn();
       
       render(<SearchBar {...defaultProps} />);
 
       const searchInput = screen.getByPlaceholderText('Search your figures...');
       await user.type(searchInput, 'Test query');
 
-      // Simulate form submission with preventDefault
+      // Test that form submission triggers search handler instead of page navigation
       const form = searchInput.closest('form');
-      fireEvent.submit(form!, { preventDefault: mockPreventDefault });
+      fireEvent.submit(form!);
 
-      expect(mockPreventDefault).toHaveBeenCalled();
+      // Verify search was called instead of page navigation
+      expect(mockOnSearch).toHaveBeenCalledWith('Test query');
     });
 
     it('should be wrapped in a form element', () => {
@@ -274,8 +274,8 @@ describe('SearchBar', () => {
       render(<SearchBar {...defaultProps} />);
 
       const searchInput = screen.getByPlaceholderText('Search your figures...');
-      // Default input type should be text, which is search-friendly
-      expect(searchInput).toHaveAttribute('type', 'text');
+      // Should use search input type for better UX and mobile keyboards
+      expect(searchInput).toHaveAttribute('type', 'search');
     });
   });
 

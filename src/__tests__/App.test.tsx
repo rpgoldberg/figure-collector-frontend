@@ -95,25 +95,14 @@ const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore
 // Custom render function for routing tests
 const renderWithRouter = (
   ui: React.ReactElement,
-  { initialEntries = ['/'], ...options } = {}
+  { initialEntries = ['/'] } = {}
 ) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, cacheTime: 0 },
-    },
-  });
+  // Clean up any existing renders
+  const container = document.body;
+  const existingRoots = container.querySelectorAll('[data-reactroot]');
+  existingRoots.forEach(root => root.remove());
 
-  const AllProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <ChakraProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={initialEntries}>
-          {children}
-        </MemoryRouter>
-      </QueryClientProvider>
-    </ChakraProvider>
-  );
-
-  return render(ui, { wrapper: AllProviders, ...options });
+  return render(ui, { initialRoutes: initialEntries });
 };
 
 describe('App Routing', () => {
@@ -339,9 +328,10 @@ describe('App Routing', () => {
       ];
 
       protectedRoutes.forEach(route => {
-        renderWithRouter(<App />, { initialEntries: [route] });
+        const { unmount } = renderWithRouter(<App />, { initialEntries: [route] });
         expect(screen.getByTestId('layout')).toBeInTheDocument();
         expect(screen.getByTestId('layout-header')).toBeInTheDocument();
+        unmount(); // Clean up between iterations
       });
     });
 

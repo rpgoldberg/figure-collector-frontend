@@ -20,16 +20,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Serena cache
-.serena/
-
 # Temporary test files
 src/components/__tests__/Layout.basic.test.tsx
 src/components/__tests__/Layout.simple.test.tsx
 
-# Claude configuration
-.claude/
-CLAUDE.md
+# Include Claude Code configurations for team collaboration
+# These provide valuable development infrastructure and agent definitions
+# !.claude/
+# !CLAUDE.md
+# Exclude only personal Claude preferences
+.claude/personal/
+.claude/user-*/
 
 # Git helper scripts
 git_command.sh

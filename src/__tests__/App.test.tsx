@@ -97,16 +97,31 @@ const renderWithRouter = (
   ui: React.ReactElement,
   { initialEntries = ['/'] } = {}
 ) => {
-  // Clean up any existing renders
-  const container = document.body;
-  const existingRoots = container.querySelectorAll('[data-reactroot]');
-  existingRoots.forEach(root => root.remove());
+  // Clean up any existing renders and reset DOM
+  document.body.innerHTML = '';
+  const container = document.createElement('div');
+  document.body.appendChild(container);
 
-  return render(ui, { initialRoutes: initialEntries });
+  const result = render(ui, { initialRoutes: initialEntries });
+  
+  // Ensure proper cleanup after each test
+  return {
+    ...result,
+    unmount: () => {
+      result.unmount();
+      document.body.innerHTML = '';
+    }
+  };
 };
 
 describe('App Routing', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks(); // Reset mock implementations
+    jest.restoreAllMocks(); // Restore original implementations
+  });
+
+  afterEach(() => {
     jest.clearAllMocks();
   });
 

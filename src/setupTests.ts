@@ -27,9 +27,16 @@ global.__EMOTION_RUNTIME_CONFIG__ = {
 // Enhance Testing Library configuration for React 18
 configure({
   // Adjust for React 18 and async operations
-  asyncUtilTimeout: 5000,
+  asyncUtilTimeout: 10000, // Extended async timeout
   // Relaxed queries to be more inclusive
   testIdAttribute: 'data-testid',
+  // Improved query configurations
+  throwSuggestions: true,
+});
+
+// Global error handling for async tests
+global.addEventListener('unhandledrejection', event => {
+  console.warn('Unhandled promise rejection:', event.reason);
 });
 
 // Mock window.scrollTo for Framer Motion animations

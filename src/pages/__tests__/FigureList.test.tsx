@@ -95,7 +95,8 @@ describe('FigureList', () => {
       
       render(<FigureList />);
 
-      expect(screen.getByRole('status')).toBeInTheDocument(); // Spinner
+      // Check for Spinner by test ID or class since Chakra UI Spinner may not have role="status"
+      expect(document.querySelector('.chakra-spinner')).toBeInTheDocument();
     });
 
     it('should hide loading spinner after data loads', async () => {

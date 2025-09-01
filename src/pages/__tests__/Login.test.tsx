@@ -211,7 +211,7 @@ describe('Login', () => {
       
       render(<Login />);
 
-      const emailInput = screen.getByLabelText(/email/i);
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
       const passwordInput = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
 
@@ -219,10 +219,9 @@ describe('Login', () => {
       await user.type(passwordInput, 'password123');
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(submitButton).toBeDisabled();
-        expect(screen.getByText('Sign In')).toBeInTheDocument();
-      });
+      // Check loading state immediately without waiting for state changes
+      expect(submitButton).toBeDisabled();
+      expect(screen.getByText('Sign In')).toBeInTheDocument();
     });
   });
 

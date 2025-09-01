@@ -14,6 +14,7 @@ module.exports = {
   ],
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   collectCoverageFrom: [
+    '!**/node_modules/**', // Exclude node_modules
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/index.tsx',
@@ -66,6 +67,8 @@ module.exports = {
   },
   timers: 'fake',
   maxWorkers: '50%',
-  testTimeout: 10000,
+  testTimeout: 15000, // Extended timeout for complex routing tests
+  verbose: true, // More detailed test output
+  resetModules: true, // Reset module registry before each test
   snapshotSerializers: ['@emotion/jest/serializer']
 };

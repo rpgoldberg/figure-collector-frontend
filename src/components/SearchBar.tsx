@@ -30,6 +30,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
     <Box as="form" onSubmit={handleSubmit} width="100%">
       <InputGroup size="lg">
         <Input
+          type="search"
+          role="searchbox"
+          aria-label="Search your figures"
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}

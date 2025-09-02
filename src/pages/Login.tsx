@@ -94,7 +94,7 @@ const Login: React.FC = () => {
           </Text>
         </Flex>
         
-        <Box as="form" onSubmit={handleSubmit(onSubmit)}>
+        <Box as="form" role="form" onSubmit={handleSubmit(onSubmit)}>
           <FormControl isInvalid={!!errors.email} mb={4}>
             <FormLabel>Email</FormLabel>
             <Input

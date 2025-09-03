@@ -61,14 +61,9 @@ module.exports = {
   ],
   modulePaths: ['<rootDir>/src'],
   resolver: '<rootDir>/node_modules/jest-pnp-resolver',
-  fakeTimers: {
-    enableGlobally: true,
-    legacyFakeTimers: false
-  },
-  timers: 'fake',
   maxWorkers: '50%',
-  testTimeout: 15000, // Extended timeout for complex routing tests
-  verbose: true, // More detailed test output
-  resetModules: true, // Reset module registry before each test
+  testTimeout: 15000,
+  verbose: true,
+  resetModules: true,
   snapshotSerializers: ['@emotion/jest/serializer']
 };

@@ -35,9 +35,12 @@ configure({
 });
 
 // Global error handling for async tests
-global.addEventListener('unhandledrejection', event => {
+const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
   console.warn('Unhandled promise rejection:', event.reason);
-});
+  // Fail the test run to avoid masking errors
+  throw event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+};
+global.addEventListener('unhandledrejection', unhandledRejectionHandler);
 
 // Mock window.scrollTo for Framer Motion animations
 Object.defineProperty(window, 'scrollTo', {
@@ -47,33 +50,27 @@ Object.defineProperty(window, 'scrollTo', {
 
 // Comprehensive axios mock to prevent ES module import issues
 jest.mock('axios', () => {
+  const makeInstance = () => {
+    const instance: any = {
+      get: jest.fn(() => Promise.resolve({ data: {} })),
+      post: jest.fn(() => Promise.resolve({ data: {} })),
+      put: jest.fn(() => Promise.resolve({ data: {} })),
+      delete: jest.fn(() => Promise.resolve({ data: {} })),
+      patch: jest.fn(() => Promise.resolve({ data: {} })),
+      interceptors: {
+        request: { use: jest.fn(), eject: jest.fn() },
+        response: { use: jest.fn(), eject: jest.fn() },
+      },
+      defaults: {
+        headers: { common: {}, delete: {}, head: {}, patch: {}, post: {}, put: {} },
+      },
+    };
+    return instance;
+  };
+  const defaultInstance = makeInstance();
   const mockAxios = {
-    create: jest.fn(() => mockAxios),
-    get: jest.fn(() => Promise.resolve({ data: {} })),
-    post: jest.fn(() => Promise.resolve({ data: {} })),
-    put: jest.fn(() => Promise.resolve({ data: {} })),
-    delete: jest.fn(() => Promise.resolve({ data: {} })),
-    patch: jest.fn(() => Promise.resolve({ data: {} })),
-    interceptors: {
-      request: {
-        use: jest.fn(),
-        eject: jest.fn(),
-      },
-      response: {
-        use: jest.fn(),
-        eject: jest.fn(),
-      },
-    },
-    defaults: {
-      headers: {
-        common: {},
-        delete: {},
-        head: {},
-        patch: {},
-        post: {},
-        put: {},
-      },
-    },
+    ...defaultInstance,
+    create: jest.fn(() => makeInstance()),
   };
   return {
     __esModule: true,

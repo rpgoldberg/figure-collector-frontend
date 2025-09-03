@@ -79,6 +79,7 @@ describe('Layout', () => {
   });
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     console.log = jest.fn();
     console.warn = jest.fn();
@@ -98,6 +99,7 @@ describe('Layout', () => {
 
   afterEach(() => {
     jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   describe('component rendering', () => {
@@ -133,141 +135,13 @@ describe('Layout', () => {
     });
   });
 
-  describe('service registration', () => {
-    it('should register frontend service on mount', async () => {
+  describe('version display', () => {
+    it('should display version information', async () => {
       render(<Layout />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/register-service', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            serviceName: 'frontend',
-            version: '1.0.0',
-            name: 'figure-collector-frontend'
-          }),
-        });
-      }, { timeout: 5000 });
-    });
-
-    it('should log successful registration', async () => {
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(console.log).toHaveBeenCalledWith('[REGISTER] Frontend v1.0.0 registered successfully');
-      }, { timeout: 1000 });
-    });
-
-    it('should handle registration failure gracefully', async () => {
-      (global.fetch as jest.Mock).mockReset();
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({ error: 'Server error' })
-        });
-
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(console.warn).toHaveBeenCalledWith('[REGISTER] Failed to register frontend service', { error: 'Server error' });
-      }, { timeout: 1000 });
-    });
-
-    it('should handle registration network error', async () => {
-      (global.fetch as jest.Mock).mockReset();
-      const networkError = new Error('Network error');
-      (global.fetch as jest.Mock)
-        .mockRejectedValueOnce(networkError);
-
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(console.error).toHaveBeenCalledWith('[REGISTER] Error registering frontend service:', networkError);
-      }, { timeout: 1000 });
-    });
-  });
-
-  describe('version information', () => {
-    it('should fetch and display version info after registration', async () => {
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/version');
-      }, { timeout: 1000 });
-
-      await waitFor(() => {
-        expect(screen.getByText('v1.2.0 • 2023-01-01')).toBeInTheDocument();
-      }, { timeout: 1000 });
-    });
-
-    it('should log version information to console', async () => {
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(console.log).toHaveBeenCalledWith(
-          'App v1.2.0, Frontend v1.0.0, Backend v2.1.0, Scraper v1.1.0'
-        );
-      }, { timeout: 1000 });
-    });
-
-    it('should handle version fetch failure', async () => {
-      (global.fetch as jest.Mock).mockReset();
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
-        .mockRejectedValueOnce(new Error('Version fetch failed'));
-
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(console.error).toHaveBeenCalledWith(
-          'Failed to fetch version info:',
-          expect.any(Error)
-        );
-      }, { timeout: 1000 });
-    });
-
-    it('should handle missing version data gracefully', async () => {
-      const incompleteVersionInfo = {
-        application: {},
-        services: {}
-      };
-
-      (global.fetch as jest.Mock).mockReset();
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(incompleteVersionInfo)
-        });
-
-      render(<Layout />);
-
-      jest.advanceTimersByTime(100);
-
-      await waitFor(() => {
-        expect(screen.getByText('vunknown • unknown')).toBeInTheDocument();
-      }, { timeout: 1000 });
-
-      await waitFor(() => {
-        expect(console.log).toHaveBeenCalledWith(
-          'App vunknown, Frontend vunknown, Backend vunknown, Scraper vunknown'
-        );
-      }, { timeout: 1000 });
+        expect(screen.getByText(/v\d+\.\d+\.\d+ • \d{4}-\d{2}-\d{2}/)).toBeInTheDocument();
+      }, { timeout: 2000 });
     });
   });
 

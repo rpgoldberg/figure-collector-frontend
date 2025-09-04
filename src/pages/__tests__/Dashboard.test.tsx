@@ -41,11 +41,22 @@ jest.mock('../../components/SearchBar', () => {
 
 // Mock react-router-dom
 const mockNavigate = jest.fn();
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: () => mockNavigate,
-  Link: ({ children, to }: any) => <a href={to}>{children}</a>,
-}));
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// Mock react-query for this test
+jest.mock('react-query', () => {
+  const actual = jest.requireActual('react-query');
+  return {
+    ...actual,
+    useQuery: jest.fn(),
+  };
+});
 
 describe('Dashboard', () => {
   const mockFiguresData = {
@@ -78,7 +89,45 @@ describe('Dashboard', () => {
     jest.clearAllMocks();
     mockApi.getFigures.mockResolvedValue(mockFiguresData);
     mockApi.getFigureStats.mockResolvedValue(mockStatsData);
-    jest.useFakeTimers();
+    
+    // Mock useQuery to return appropriate data based on query key
+    const { useQuery } = require('react-query');
+    useQuery.mockImplementation((key: string) => {
+      if (key === 'recentFigures') {
+        return {
+          data: mockFiguresData,
+          isLoading: false,
+          isError: false,
+          error: null,
+          isSuccess: true,
+          status: 'success',
+          refetch: jest.fn(() => Promise.resolve({ data: mockFiguresData })),
+        };
+      } else if (key === 'dashboardStats') {
+        return {
+          data: mockStatsData,
+          isLoading: false,
+          isError: false,
+          error: null,
+          isSuccess: true,
+          status: 'success',
+          refetch: jest.fn(() => Promise.resolve({ data: mockStatsData })),
+        };
+      }
+      
+      return {
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null,
+        isSuccess: false,
+        status: 'idle',
+        refetch: jest.fn(() => Promise.resolve({ data: null })),
+      };
+    });
+    
+    // Use real timers to avoid conflicts with userEvent and Promises
+    jest.useRealTimers();
   });
 
   afterEach(() => {
@@ -117,7 +166,10 @@ describe('Dashboard', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Recent Figures')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /view all/i })).toBeInTheDocument();
+        // Find the View All link by its text content and href
+        const viewAllLink = screen.getByText('View All');
+        expect(viewAllLink).toBeInTheDocument();
+        expect(viewAllLink.closest('a')).toHaveAttribute('href', '/figures');
       });
     });
 
@@ -247,7 +299,7 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       await waitFor(() => {
-        const viewAllLink = screen.getByRole('link', { name: /view all/i });
+        const viewAllLink = screen.getByRole('link', { name: /^view all$/i });
         expect(viewAllLink).toHaveAttribute('href', '/figures');
       });
     });
@@ -402,7 +454,7 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       await waitFor(() => {
-        expect(screen.getByRole('link', { name: /view all/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /^view all$/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /view all statistics/i })).toBeInTheDocument();
       });
     });

@@ -83,8 +83,8 @@ describe('FigureCard', () => {
 
       const image = screen.getByRole('img', { name: mockFigureWithAllData.name });
       expect(image).toBeInTheDocument();
-      // Image may use fallback URL if primary URL fails to load
-      expect(image).toHaveAttribute('src', expect.stringContaining('placeholder'));
+      // Should use the provided imageUrl
+      expect(image).toHaveAttribute('src', mockFigureWithAllData.imageUrl);
     });
 
     it('should use placeholder when no image URL provided', () => {

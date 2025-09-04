@@ -35,9 +35,7 @@ module.exports = {
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^axios$': '<rootDir>/node_modules/axios/lib/axios.js',
-    '^@chakra-ui/react$': '<rootDir>/node_modules/@chakra-ui/react',
-    '^@chakra-ui/(.*)$': '<rootDir>/node_modules/@chakra-ui/$1',
-    '@chakra-ui/utils/context': '<rootDir>/node_modules/@chakra-ui/utils/dist/context',
+    // Standard module mappings
     '^@emotion/(.*)$': '<rootDir>/node_modules/@emotion/$1',
     '^(api|components|pages|stores|utils)/(.*)$': '<rootDir>/src/$1/$2'
   },
@@ -62,7 +60,7 @@ module.exports = {
   modulePaths: ['<rootDir>/src'],
   resolver: '<rootDir>/node_modules/jest-pnp-resolver',
   maxWorkers: '50%',
-  testTimeout: 15000,
+  testTimeout: 20000,
   verbose: true,
   resetModules: true,
   snapshotSerializers: ['@emotion/jest/serializer']

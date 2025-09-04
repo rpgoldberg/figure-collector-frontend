@@ -2,13 +2,23 @@ import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { CacheProvider } from '@emotion/react';
 // Removed createEmotionServer import
 import createCache from '@emotion/cache';
 
-const queryClient = new QueryClient({
+// Mock QueryClient and QueryClientProvider directly for test-utils
+const MockQueryClientProvider = ({ children }: { children: React.ReactNode }) =>
+  React.createElement('div', { 'data-testid': 'query-client-provider' }, children);
+
+class MockQueryClient {
+  defaultOptions: any;
+  constructor(options: any) {
+    this.defaultOptions = options;
+  }
+}
+
+const queryClient = new MockQueryClient({
   defaultOptions: {
     queries: {
       // Disable retries for testing
@@ -50,13 +60,13 @@ const AllProviders = ({ children, initialRoutes = ['/'] }: {
 
   return (
     <CacheProvider value={emotionCache}>
-      <QueryClientProvider client={queryClient}>
+      <MockQueryClientProvider client={queryClient}>
         <ChakraProvider theme={testTheme}>
           <MemoryRouter initialEntries={initialRoutes}>
             {children}
           </MemoryRouter>
         </ChakraProvider>
-      </QueryClientProvider>
+      </MockQueryClientProvider>
     </CacheProvider>
   );
 };

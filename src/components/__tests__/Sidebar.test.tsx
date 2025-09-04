@@ -130,10 +130,10 @@ describe('Sidebar', () => {
     it('should have proper semantic HTML structure', () => {
       render(<Sidebar />);
 
-      // Check that the sidebar has proper container structure
-      const sidebarContainer = screen.getByTestId('box');
+      // Check that the sidebar renders as an aside element
+      const sidebarContainer = screen.getByRole('complementary');
       expect(sidebarContainer).toBeInTheDocument();
-      expect(sidebarContainer).toHaveAttribute('as', 'aside');
+      expect(sidebarContainer.tagName).toBe('ASIDE');
     });
   });
 

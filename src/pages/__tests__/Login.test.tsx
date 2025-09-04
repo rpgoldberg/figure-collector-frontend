@@ -105,7 +105,7 @@ describe('Login', () => {
       // Use getByText for this specific case since it's a Chakra Link component
       const registerLink = screen.getByText('Register');
       expect(registerLink).toBeInTheDocument();
-      expect(registerLink.closest('a')).toHaveAttribute('to', '/register');
+      expect(registerLink.closest('a')).toHaveAttribute('href', '/register');
     });
 
     it('should render app logo and title', () => {

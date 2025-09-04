@@ -20,7 +20,7 @@ describe('EmptyState', () => {
 
       expect(screen.getByText('Your collection is empty')).toBeInTheDocument();
       expect(screen.getByText("You haven't added any figures to your collection yet.")).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /add your first figure/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /add your first figure/i })).toBeInTheDocument();
     });
 
     it('should render collection empty state with custom message', () => {
@@ -34,8 +34,8 @@ describe('EmptyState', () => {
     it('should have correct link to add figure page', () => {
       render(<EmptyState type="collection" />);
 
-      const addButton = screen.getByRole('button', { name: /add your first figure/i });
-      expect(addButton).toHaveAttribute('to', '/figures/add');
+      const addButton = screen.getByRole('link', { name: /add your first figure/i });
+      expect(addButton).toHaveAttribute('href', '/figures/add');
     });
 
     it('should display collection icon', () => {
@@ -111,15 +111,15 @@ describe('EmptyState', () => {
 
       expect(screen.getByText('Nothing to display')).toBeInTheDocument();
       expect(screen.getByText('No content available.')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /go to dashboard/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /go to dashboard/i })).toBeInTheDocument();
     });
 
     it('should have correct link to dashboard', () => {
       // @ts-ignore - Testing with invalid type
       render(<EmptyState type="unknown" />);
 
-      const dashboardButton = screen.getByRole('button', { name: /go to dashboard/i });
-      expect(dashboardButton).toHaveAttribute('to', '/');
+      const dashboardButton = screen.getByRole('link', { name: /go to dashboard/i });
+      expect(dashboardButton).toHaveAttribute('href', '/');
     });
 
     it('should render default empty state with custom message', () => {
@@ -138,7 +138,7 @@ describe('EmptyState', () => {
 
       // Test that the component renders with appropriate structure
       expect(screen.getByText('Your collection is empty')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /add your first figure/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /add your first figure/i })).toBeInTheDocument();
     });
 
     it('should render with proper vertical spacing', () => {
@@ -157,7 +157,7 @@ describe('EmptyState', () => {
     it('should have proper button roles for collection type', () => {
       render(<EmptyState type="collection" />);
 
-      const button = screen.getByRole('button', { name: /add your first figure/i });
+      const button = screen.getByRole('link', { name: /add your first figure/i });
       expect(button).toBeInTheDocument();
     });
 
@@ -201,7 +201,7 @@ describe('EmptyState', () => {
       // This tests edge case where onclick might not be defined
       render(<EmptyState type="collection" />);
       
-      const button = screen.getByRole('button', { name: /add your first figure/i });
+      const button = screen.getByRole('link', { name: /add your first figure/i });
       expect(button).toBeInTheDocument();
       
       // Should not throw error when rendered
@@ -215,7 +215,7 @@ describe('EmptyState', () => {
 
       expect(screen.getByText('Your collection is empty')).toBeInTheDocument();
       // Component should render without errors when message is empty
-      expect(screen.getByRole('button', { name: /add your first figure/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /add your first figure/i })).toBeInTheDocument();
     });
 
     it('should handle very long custom messages', () => {

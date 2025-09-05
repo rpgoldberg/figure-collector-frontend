@@ -40,7 +40,7 @@ const Search: React.FC = () => {
         });
       },
     }
-  );
+  ) || { data: null, isLoading: false, error: null };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

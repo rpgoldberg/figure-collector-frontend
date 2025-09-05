@@ -46,7 +46,7 @@ const FigureDetail: React.FC = () => {
         });
       },
     }
-  );
+  ) || { data: null, isLoading: false, error: null };
   
   const deleteMutation = useMutation(() => deleteFigure(id!), {
     onSuccess: () => {

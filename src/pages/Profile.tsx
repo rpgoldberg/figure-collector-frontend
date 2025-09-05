@@ -50,7 +50,7 @@ const Profile: React.FC = () => {
   const [showPassword, setShowPassword] = React.useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   
-  const { data: profile, isLoading, error } = useQuery('userProfile', getUserProfile);
+  const { data: profile, isLoading, error } = useQuery('userProfile', getUserProfile) || { data: null, isLoading: false, error: null };
   
   const {
     register,

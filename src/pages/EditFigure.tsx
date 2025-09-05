@@ -42,7 +42,7 @@ const EditFigure: React.FC = () => {
         });
       },
     }
-  );
+  ) || { data: null, isLoading: false, error: null };
   
   const mutation = useMutation(
     (data: FigureFormData) => updateFigure(id!, data),

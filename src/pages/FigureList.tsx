@@ -41,7 +41,7 @@ const FigureList: React.FC = () => {
         });
       },
     }
-  );
+  ) || { data: null, isLoading: false, error: null };
   
   const handlePageChange = (newPage: number) => {
     setPage(newPage);

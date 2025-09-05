@@ -26,8 +26,8 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   
-  const { data: figuresData } = useQuery('recentFigures', () => getFigures(1, 4));
-  const { data: statsData } = useQuery('dashboardStats', getFigureStats);
+  const { data: figuresData } = useQuery('recentFigures', () => getFigures(1, 4)) || {};
+  const { data: statsData } = useQuery('dashboardStats', getFigureStats) || {};
   
   const handleSearch = (query: string) => {
     navigate(`/search?q=${encodeURIComponent(query)}`);

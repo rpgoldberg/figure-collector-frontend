@@ -1,9 +1,4 @@
-import React from 'react';
-import '@testing-library/jest-dom';
-import 'jest-axe/extend-expect';
-import { configure } from '@testing-library/react';
-
-// Mock react-query completely for v3 compatibility - MUST BE FIRST
+// CRITICAL: Mock react-query FIRST before any other imports
 jest.mock('react-query', () => {
   const mockReact = require('react');
   
@@ -18,14 +13,175 @@ jest.mock('react-query', () => {
   const MockQueryClientProvider = ({ children, client, ...props }) =>
     mockReact.createElement('div', { 'data-testid': 'query-client-provider', ...props }, children);
 
+  // Create useMutation mock implementation
+  const createMutationMock = (mutationFn, options) => {
+    // Create a stable mutation object that can handle dynamic state changes
+    const mutationState = {
+      isLoading: false,
+      isError: false,
+      isSuccess: false,
+      error: null,
+      data: null,
+      status: 'idle',
+      isPending: false,
+      isIdle: true,
+    };
+    
+    const mutation = {
+      mutate: jest.fn((variables) => {
+        // Set loading state
+        Object.assign(mutationState, {
+          isLoading: true,
+          isError: false,
+          isSuccess: false,
+          status: 'loading',
+          isPending: true,
+          isIdle: false,
+        });
+        
+        // Execute the actual mutation function if provided
+        if (typeof mutationFn === 'function') {
+          try {
+            // Call the mutation function immediately so it can be tracked in tests
+            const result = mutationFn(variables);
+            
+            // Handle both sync and async results
+            Promise.resolve(result)
+              .then((resolvedResult) => {
+                Object.assign(mutationState, {
+                  isLoading: false,
+                  isError: false,
+                  isSuccess: true,
+                  data: resolvedResult,
+                  status: 'success',
+                  isPending: false,
+                  isIdle: false,
+                });
+                // Call onSuccess callback if provided
+                if (options?.onSuccess) {
+                  // Use setTimeout to ensure callbacks are called after state updates
+                  setTimeout(() => options.onSuccess(resolvedResult, variables), 0);
+                }
+              })
+              .catch((error) => {
+                Object.assign(mutationState, {
+                  isLoading: false,
+                  isError: true,
+                  isSuccess: false,
+                  error: error,
+                  status: 'error',
+                  isPending: false,
+                  isIdle: false,
+                });
+                // Call onError callback if provided
+                if (options?.onError) {
+                  // Use setTimeout to ensure callbacks are called after state updates
+                  setTimeout(() => options.onError(error, variables), 0);
+                }
+              });
+          } catch (syncError) {
+            // Handle synchronous errors
+            Object.assign(mutationState, {
+              isLoading: false,
+              isError: true,
+              isSuccess: false,
+              error: syncError,
+              status: 'error',
+              isPending: false,
+              isIdle: false,
+            });
+            if (options?.onError) {
+              setTimeout(() => options.onError(syncError, variables), 0);
+            }
+          }
+        }
+      }),
+      mutateAsync: jest.fn((variables) => {
+        // Execute the actual mutation function if provided
+        if (typeof mutationFn === 'function') {
+          return Promise.resolve(mutationFn(variables))
+            .then((result) => {
+              Object.assign(mutationState, {
+                isLoading: false,
+                isError: false,
+                isSuccess: true,
+                data: result,
+                status: 'success',
+                isPending: false,
+                isIdle: false,
+              });
+              // Call onSuccess callback if provided
+              if (options?.onSuccess) {
+                options.onSuccess(result, variables);
+              }
+              return result;
+            })
+            .catch((error) => {
+              Object.assign(mutationState, {
+                isLoading: false,
+                isError: true,
+                isSuccess: false,
+                error: error,
+                status: 'error',
+                isPending: false,
+                isIdle: false,
+              });
+              // Call onError callback if provided
+              if (options?.onError) {
+                options.onError(error, variables);
+              }
+              throw error;
+            });
+        }
+        return Promise.resolve({});
+      }),
+      reset: jest.fn(() => {
+        Object.assign(mutationState, {
+          isLoading: false,
+          isError: false,
+          isSuccess: false,
+          error: null,
+          data: null,
+          status: 'idle',
+          isPending: false,
+          isIdle: true,
+        });
+      }),
+      // Spread the current state
+      ...mutationState,
+      // Make the mutation object dynamic
+      get isLoading() { return mutationState.isLoading; },
+      get isError() { return mutationState.isError; },
+      get isSuccess() { return mutationState.isSuccess; },
+      get error() { return mutationState.error; },
+      get data() { return mutationState.data; },
+      get status() { return mutationState.status; },
+      get isPending() { return mutationState.isPending; },
+      get isIdle() { return mutationState.isIdle; },
+    };
+    
+    return mutation;
+  };
+
   return {
     __esModule: true,
     QueryClient: MockQueryClient,
     QueryClientProvider: MockQueryClientProvider,
-    useQuery: jest.fn((queryKey) => {
+    useQuery: jest.fn((queryKey, queryFn, options) => {
+      // Handle multiple argument formats (v3 vs v4 API)
+      let actualKey = queryKey;
+      
+      // If first argument is an object with a queryKey property (v4 style)
+      if (queryKey && typeof queryKey === 'object' && 'queryKey' in queryKey) {
+        actualKey = queryKey.queryKey;
+      }
+      
+      // Handle both string and array query keys
+      const keyString = Array.isArray(actualKey) ? actualKey[0] : actualKey;
+      
       // Return specific mock data based on query key
-      let data = null;
-      if (queryKey === 'figureStats') {
+      let data = {};
+      if (keyString === 'figureStats' || queryKey === 'figureStats') {
         data = {
           manufacturerStats: [
             { _id: 'Good Smile Company', count: 5 },
@@ -40,7 +196,7 @@ jest.mock('react-query', () => {
             { _id: 'Storage Box', count: 3 },
           ]
         };
-      } else if (queryKey === 'recentFigures') {
+      } else if (keyString === 'recentFigures' || queryKey === 'recentFigures') {
         data = {
           success: true,
           count: 4,
@@ -54,7 +210,7 @@ jest.mock('react-query', () => {
             { _id: '4', name: 'Test Figure 4', manufacturer: 'Test Company' },
           ]
         };
-      } else if (queryKey === 'dashboardStats') {
+      } else if (keyString === 'dashboardStats' || queryKey === 'dashboardStats') {
         data = {
           totalCount: 10,
           manufacturerStats: [
@@ -73,18 +229,56 @@ jest.mock('react-query', () => {
             { _id: 'Shelf A', count: 2 }
           ]
         };
+      } else if (keyString === 'figures' || (Array.isArray(actualKey) && actualKey[0] === 'figures')) {
+        // Handle FigureList queries with ['figures', page, filters] pattern
+        data = {
+          success: true,
+          count: 3,
+          page: 1,
+          pages: 1,
+          total: 3,
+          data: [
+            { _id: '1', name: 'Test Figure 1', manufacturer: 'Test Company', series: 'Test Series', scale: '1/8', location: 'Display Case', boxNumber: 'Box 1', imageUrl: 'test1.jpg' },
+            { _id: '2', name: 'Test Figure 2', manufacturer: 'ALTER', series: 'Test Series 2', scale: '1/7', location: 'Storage Box', boxNumber: 'Box 2', imageUrl: 'test2.jpg' },
+            { _id: '3', name: 'Test Figure 3', manufacturer: 'Kotobukiya', series: 'Test Series 3', scale: '1/6', location: 'Shelf A', boxNumber: 'Box 3', imageUrl: 'test3.jpg' },
+          ]
+        };
+      } else {
+        // Provide default data for any unknown queries
+        data = {
+          success: true,
+          data: [],
+          count: 0,
+          page: 1,
+          pages: 0,
+          total: 0
+        };
       }
       
-      return {
-        data,
+      // CRITICAL: Always return a consistent object structure, never undefined
+      const queryResult = {
+        data: data,
         isLoading: false,
         isError: false,
         error: null,
         isSuccess: true,
         status: 'success',
-        refetch: jest.fn(() => Promise.resolve({ data })),
+        refetch: jest.fn(() => Promise.resolve({ data: data })),
         isFetched: true,
+        isStale: false,
+        dataUpdatedAt: Date.now(),
+        failureCount: 0,
       };
+      
+      // CRITICAL: Make destructuring safe - never return undefined
+      Object.defineProperty(queryResult, 'data', {
+        value: data,
+        writable: false,
+        enumerable: true,
+        configurable: false
+      });
+      
+      return queryResult;
     }),
     useQueryClient: jest.fn(() => ({
       clear: jest.fn(),
@@ -92,18 +286,32 @@ jest.mock('react-query', () => {
       setQueryData: jest.fn(),
       getQueryData: jest.fn(),
     })),
-    useMutation: jest.fn(() => ({
-      mutate: jest.fn(),
-      mutateAsync: jest.fn(() => Promise.resolve({})),
-      isLoading: false,
-      isError: false,
-      isSuccess: false,
-      error: null,
-      data: null,
-      reset: jest.fn(),
-    })),
+    useMutation: jest.fn((mutationFn, options) => {
+      // ULTRA-SIMPLIFIED: Just return a static object that will never be undefined
+      console.log('useMutation mock called');
+      const result = {
+        isLoading: false,
+        isError: false,
+        isSuccess: false,
+        error: null,
+        data: null,
+        status: 'idle',
+        isPending: false,
+        isIdle: true,
+        mutate: jest.fn(),
+        mutateAsync: jest.fn(() => Promise.resolve({})),
+        reset: jest.fn()
+      };
+      console.log('useMutation mock returning:', result);
+      return result;
+    }),
   };
 });
+
+import React from 'react';
+import '@testing-library/jest-dom';
+import 'jest-axe/extend-expect';
+import { configure } from '@testing-library/react';
 
 // Global Emotion runtime configuration for testing
 global.__emotion_real = {
@@ -226,17 +434,130 @@ Object.defineProperty(window, 'scrollTo', {
 // Create a simple, reliable mock axios instance
 const createMockAxiosInstance = () => {
   const instance: any = {
-    get: jest.fn(() => Promise.resolve({ data: {} })),
-    post: jest.fn(() => Promise.resolve({ data: {} })),
-    put: jest.fn(() => Promise.resolve({ data: {} })),
-    delete: jest.fn(() => Promise.resolve({ data: {} })),
-    patch: jest.fn(() => Promise.resolve({ data: {} })),
+    get: jest.fn((url, config) => {
+      // Track the call for test verification
+      // Return different data based on URL patterns
+      if (url?.includes('/figures/stats')) {
+        return Promise.resolve({ 
+          data: { 
+            data: {
+              manufacturerStats: [
+                { _id: 'Good Smile Company', count: 5 },
+                { _id: 'ALTER', count: 3 }
+              ],
+              scaleStats: [
+                { _id: '1/8', count: 6 },
+                { _id: '1/7', count: 3 }
+              ],
+              locationStats: [
+                { _id: 'Display Case', count: 5 },
+                { _id: 'Storage Box', count: 3 }
+              ]
+            }
+          }
+        });
+      } else if (url?.includes('/figures/search')) {
+        return Promise.resolve({ 
+          data: { 
+            data: [
+              { _id: '1', name: 'Test Figure 1', manufacturer: 'Test Company' },
+              { _id: '2', name: 'Test Figure 2', manufacturer: 'Test Company' }
+            ]
+          }
+        });
+      } else if (url?.includes('/figures/filter')) {
+        return Promise.resolve({ 
+          data: [
+            { _id: '1', name: 'Test Figure 1', manufacturer: 'Test Company' },
+            { _id: '2', name: 'Test Figure 2', manufacturer: 'Test Company' }
+          ]
+        });
+      } else if (url?.includes('/figures')) {
+        return Promise.resolve({ 
+          data: { 
+            data: [
+              { _id: '1', name: 'Test Figure 1', manufacturer: 'Test Company' },
+              { _id: '2', name: 'Test Figure 2', manufacturer: 'Test Company' }
+            ],
+            count: 2,
+            page: 1,
+            pages: 1,
+            total: 2
+          }
+        });
+      }
+      // Default response
+      return Promise.resolve({ data: { data: {} } });
+    }),
+    post: jest.fn((url, data, config) => {
+      // Track the call and data for test verification
+      if (url?.includes('/auth/login')) {
+        return Promise.resolve({ 
+          data: { 
+            data: { 
+              user: { 
+                id: '123', 
+                email: data?.email || 'test@example.com', 
+                username: 'testuser',
+                token: 'mock-jwt-token'
+              } 
+            } 
+          }
+        });
+      } else if (url?.includes('/auth/register')) {
+        return Promise.resolve({ 
+          data: { 
+            data: { 
+              user: { 
+                id: '456', 
+                email: data?.email || 'newuser@example.com', 
+                username: data?.username || 'newuser',
+                token: 'mock-jwt-token'
+              } 
+            } 
+          }
+        });
+      } else if (url?.includes('/figures')) {
+        return Promise.resolve({ 
+          data: { 
+            data: {
+              _id: 'new-figure-id',
+              ...data
+            }
+          }
+        });
+      }
+      return Promise.resolve({ data: { success: true, data: data } });
+    }),
+    put: jest.fn((url, data, config) => {
+      // Track the call and data for test verification
+      if (url?.includes('/figures/')) {
+        return Promise.resolve({ 
+          data: { 
+            data: {
+              _id: url.split('/').pop(),
+              ...data
+            }
+          }
+        });
+      }
+      return Promise.resolve({ data: { success: true, data: data } });
+    }),
+    delete: jest.fn((url, config) => {
+      // Track the call for test verification
+      return Promise.resolve({ data: { success: true, message: 'Deleted successfully' } });
+    }),
+    patch: jest.fn((url, data, config) => {
+      // Track the call and data for test verification
+      return Promise.resolve({ data: { success: true, data: data } });
+    }),
     interceptors: {
       request: { use: jest.fn(), eject: jest.fn() },
       response: { use: jest.fn(), eject: jest.fn() },
     },
     defaults: {
       headers: { common: {}, delete: {}, head: {}, patch: {}, post: {}, put: {} },
+      baseURL: '/api',
     },
   };
   return instance;
@@ -262,11 +583,73 @@ const mockToast = jest.fn((options: any) => {
 });
 
 
-// Comprehensive axios mock to prevent ES module import issues
+// Basic axios mock - individual tests can override this with more specific mocks
 jest.mock('axios', () => {
   const mockAxios = {
     ...mockApiInstance,
-    create: jest.fn(() => mockApiInstance), // Always return the same instance for consistency
+    create: jest.fn((config) => {
+      // Track axios.create calls and return instance with the config
+      const instance = createMockAxiosInstance();
+      if (config) {
+        instance.defaults = { ...instance.defaults, ...config };
+      }
+      
+      // Set up interceptors to track calls
+      let requestInterceptor: any = null;
+      let responseInterceptor: any = null;
+      let responseErrorInterceptor: any = null;
+      
+      instance.interceptors.request.use = jest.fn((onFulfilled, onRejected) => {
+        requestInterceptor = onFulfilled;
+        return 0; // Return an interceptor ID
+      });
+      
+      instance.interceptors.response.use = jest.fn((onFulfilled, onRejected) => {
+        responseInterceptor = onFulfilled;
+        responseErrorInterceptor = onRejected;
+        return 0; // Return an interceptor ID
+      });
+      
+      // Override instance methods to apply interceptors
+      const originalGet = instance.get;
+      const originalPost = instance.post;
+      const originalPut = instance.put;
+      const originalDelete = instance.delete;
+      
+      const wrapMethod = (method: any) => {
+        return jest.fn(async (...args: any[]) => {
+          // Apply request interceptor
+          let modifiedConfig = args[1] || {};
+          if (requestInterceptor) {
+            modifiedConfig = requestInterceptor(modifiedConfig) || modifiedConfig;
+          }
+          
+          try {
+            // Call original method
+            const response = await method(...args);
+            
+            // Apply response interceptor
+            if (responseInterceptor) {
+              return responseInterceptor(response) || response;
+            }
+            return response;
+          } catch (error) {
+            // Apply error interceptor
+            if (responseErrorInterceptor) {
+              return responseErrorInterceptor(error);
+            }
+            throw error;
+          }
+        });
+      };
+      
+      instance.get = wrapMethod(originalGet);
+      instance.post = wrapMethod(originalPost);
+      instance.put = wrapMethod(originalPut);
+      instance.delete = wrapMethod(originalDelete);
+      
+      return instance;
+    }),
   };
   return {
     __esModule: true,
@@ -291,7 +674,7 @@ jest.mock('react-icons/fa', () => {
     FaEyeSlash: () => mockReact.createElement('span', { 'data-testid': 'fa-eye-slash' }, '🙈'),
     FaChevronLeft: () => mockReact.createElement('span', { 'data-testid': 'fa-chevron-left' }, '◀'),
     FaChevronRight: () => mockReact.createElement('span', { 'data-testid': 'fa-chevron-right' }, '▶'),
-    FaFilter: () => mockReact.createElement('span', { 'data-testid': 'fa-filter' }, '🔽'),
+    FaFilter: () => mockReact.createElement('span', { 'data-testid': 'fa-filter' }, '🔍'),
     FaSortAmountDown: () => mockReact.createElement('span', { 'data-testid': 'fa-sort-amount-down' }, '↓'),
     FaEdit: () => mockReact.createElement('span', { 'data-testid': 'fa-edit' }, '✏️'),
     FaTrash: () => mockReact.createElement('span', { 'data-testid': 'fa-trash' }, '🗑️'),
@@ -299,10 +682,9 @@ jest.mock('react-icons/fa', () => {
     FaLink: () => mockReact.createElement('span', { 'data-testid': 'fa-link' }, '🔗'),
     FaQuestionCircle: () => mockReact.createElement('span', { 'data-testid': 'fa-question-circle' }, '❓'),
     FaImage: () => mockReact.createElement('span', { 'data-testid': 'fa-image' }, '🖼️'),
-    FaUser: () => mockReact.createElement('span', { 'data-testid': 'fa-user' }, '👤'),
     FaSignOutAlt: () => mockReact.createElement('span', { 'data-testid': 'fa-sign-out-alt' }, '🚪'),
-    FaFilter: () => mockReact.createElement('span', { 'data-testid': 'fa-filter' }, '🔍'),
     FaTimes: () => mockReact.createElement('span', { 'data-testid': 'fa-times' }, '✕'),
+    FaArrowLeft: () => mockReact.createElement('span', { 'data-testid': 'fa-arrow-left' }, '←'),
   };
 });
 
@@ -397,6 +779,167 @@ jest.mock('@chakra-ui/react', () => {
       }, children)
     );
 
+  // Create components with displayNames for FormControl enhancement
+  // ENHANCED mock Input that properly handles ALL values for .toHaveValue() assertions
+  const MockInput = mockReact.forwardRef((props: any, ref: any) => {
+    const { placeholder, name, id, type, required, onChange, onBlur, value, defaultValue, ...domProps } = props;
+    const inputId = id || name || `input-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // CRITICAL: Determine current value - prioritize controlled value, then form data, then defaultValue
+    const currentValue = value !== undefined ? String(value) : 
+      (name && mockFormData[name] !== undefined ? String(mockFormData[name]) : 
+      (defaultValue ? String(defaultValue) : ''));
+    
+    // Initialize form data if not set
+    if (name && mockFormData[name] === undefined && (value !== undefined || defaultValue)) {
+      mockFormData[name] = currentValue;
+    }
+    
+    // ENHANCED onChange handler that properly handles all character types
+    const handleChange = (e: any) => {
+      // CRITICAL: Get the COMPLETE new value, not partial
+      const newValue = e.target.value || '';
+        
+      // Update mock form data
+      if (name) {
+        mockFormData[name] = newValue;
+        
+        // CRITICAL: Update the actual input value for proper tracking
+        if (e.target) {
+          // Use Object.defineProperty to make .value dynamic and always accurate
+          Object.defineProperty(e.target, 'value', {
+            value: newValue,
+            writable: true,
+            enumerable: true,
+            configurable: true
+          });
+        }
+        
+        // Run validation if field has rules
+        if (mockUseFormReturn._fieldRules && mockUseFormReturn._fieldRules[name]) {
+          const rules = mockUseFormReturn._fieldRules[name];
+          
+          if (rules.validate && typeof rules.validate === 'function') {
+            try {
+              const validationResult = rules.validate(newValue);
+              if (validationResult === true) {
+                if (mockErrors[name]) {
+                  delete mockErrors[name];
+                  mockUseFormReturn.formState.errors = { ...mockErrors };
+                  mockUseFormReturn.formState.isValid = Object.keys(mockErrors).length === 0;
+                }
+              } else if (validationResult && typeof validationResult === 'string') {
+                mockErrors[name] = { message: validationResult };
+                mockUseFormReturn.formState.errors = { ...mockErrors };
+                mockUseFormReturn.formState.isValid = false;
+              }
+            } catch (error) {
+              console.warn('Validation error:', error);
+            }
+          }
+        }
+      }
+      
+      // Call original onChange if provided
+      if (onChange) onChange(e);
+    };
+    
+    // Enhanced onBlur handler
+    const handleBlur = (e: any) => {
+      const blurValue = e.target.value || '';
+      
+      // Validate on blur if needed
+      if (name && required && !blurValue.trim()) {
+        const message = `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+        mockErrors[name] = { message };
+        mockUseFormReturn.formState.errors = { ...mockErrors };
+        mockUseFormReturn.formState.isValid = false;
+      }
+      
+      // Call original onBlur if provided
+      if (onBlur) onBlur(e);
+    };
+    
+    // Create input element with proper value handling
+    const inputProps: any = {
+      'data-testid': 'input',
+      placeholder,
+      name,
+      id: inputId,
+      type: type || 'text',
+      onChange: handleChange,
+      onBlur: handleBlur,
+      required: required,
+      ...domProps
+    };
+    
+    // CRITICAL: Create proper ref callback that makes .value dynamic
+    const inputRef = (element: HTMLInputElement) => {
+      if (element && name) {
+        // Make the input's value property dynamic and always return current mock data
+        Object.defineProperty(element, 'value', {
+          get: () => {
+            const formValue = mockFormData[name];
+            return formValue !== undefined ? String(formValue) : currentValue;
+          },
+          set: (newValue: string) => {
+            mockFormData[name] = newValue;
+            // Trigger change event to notify React
+            const changeEvent = new Event('change', { bubbles: true });
+            Object.defineProperty(changeEvent, 'target', {
+              value: element,
+              writable: false
+            });
+            element.dispatchEvent(changeEvent);
+          },
+          enumerable: true,
+          configurable: true
+        });
+        
+        // Set initial value
+        element.value = currentValue;
+      }
+      
+      // Call the original ref if provided
+      if (ref) {
+        if (typeof ref === 'function') {
+          ref(element);
+        } else if (ref.current !== undefined) {
+          ref.current = element;
+        }
+      }
+    };
+    
+    inputProps.ref = inputRef;
+    
+    // CRITICAL: Use controlled value if provided, otherwise use defaultValue
+    if (value !== undefined) {
+      inputProps.value = currentValue;
+    } else {
+      inputProps.defaultValue = currentValue;
+    }
+    
+    return mockReact.createElement('input', inputProps);
+  });
+  
+  const Input = mockReact.forwardRef((props: any, ref: any) => 
+    mockReact.createElement(MockInput, { ...props, ref })
+  );
+  Input.displayName = 'Input';
+
+  const FormLabel = mockReact.forwardRef(({ children, htmlFor, ...props }: any, ref: any) => {
+    return mockReact.createElement('label', { 
+      'data-testid': 'form-label', 
+      ref,
+      htmlFor,
+      ...props 
+    }, children);
+  });
+  FormLabel.displayName = 'FormLabel';
+
+  const InputGroup = createMockComponent('input-group');
+  InputGroup.displayName = 'InputGroup';
+
   return {
     // Mock toast hook - need to use a prefixed name
     useToast: () => {
@@ -435,6 +978,11 @@ jest.mock('@chakra-ui/react', () => {
       // Filter out Chakra-specific props that shouldn't be passed to DOM
       const { colorScheme, variant, size, isLoading, isDisabled, ...domProps } = props;
       
+      // CRITICAL: Add data-loading attribute as EMPTY STRING when isLoading is true (not "true")
+      if (isLoading) {
+        domProps['data-loading'] = '';
+      }
+      
       // Handle RouterLink buttons - as={RouterLink} or as={Link} or to prop present
       if (as || to) {
         return mockReact.createElement('a', { 
@@ -445,6 +993,7 @@ jest.mock('@chakra-ui/react', () => {
           ...domProps 
         }, [
           leftIcon && mockReact.createElement('span', { key: 'left-icon', 'data-testid': 'left-icon' }, leftIcon),
+          isLoading && mockReact.createElement('span', { key: 'spinner', 'data-testid': 'spinner', role: 'status' }, 'Loading...'),
           children,
           rightIcon && mockReact.createElement('span', { key: 'right-icon', 'data-testid': 'right-icon' }, rightIcon)
         ].filter(Boolean));
@@ -457,6 +1006,7 @@ jest.mock('@chakra-ui/react', () => {
         ...domProps 
       }, [
         leftIcon && mockReact.createElement('span', { key: 'left-icon', 'data-testid': 'left-icon' }, leftIcon),
+        isLoading && mockReact.createElement('span', { key: 'spinner', 'data-testid': 'spinner', role: 'status' }, 'Loading...'),
         children,
         rightIcon && mockReact.createElement('span', { key: 'right-icon', 'data-testid': 'right-icon' }, rightIcon)
       ].filter(Boolean));
@@ -469,33 +1019,81 @@ jest.mock('@chakra-ui/react', () => {
         ...props 
       }, [icon, children])
     ),
-    Input: mockReact.forwardRef(({ placeholder, ...props }: any, ref: any) =>
-      mockReact.createElement('input', { 
-        'data-testid': 'input', 
-        ref,
-        placeholder,
-        ...props 
-      })
-    ),
+    Input,
     Checkbox: createMockComponent('checkbox', 'input'),
     Select: createMockComponent('select', 'select'),
     Textarea: createMockComponent('textarea', 'textarea'),
-    FormControl: mockReact.forwardRef(({ children, ...props }: any, ref: any) =>
-      mockReact.createElement('div', { 
+    FormControl: mockReact.forwardRef(({ children, isInvalid, ...props }: any, ref: any) => {
+      // Generate unique id for this form control
+      const controlId = `field-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Clone children to inject proper accessibility attributes
+      const enhancedChildren = mockReact.Children.map(children, (child: any) => {
+        if (!child || typeof child !== 'object') return child;
+        
+        // Add htmlFor to FormLabel
+        if (child?.props && child?.type?.displayName === 'FormLabel') {
+          return mockReact.cloneElement(child, {
+            ...child.props,
+            htmlFor: controlId
+          });
+        }
+        
+        // Add id to Input
+        if (child?.props && child?.type?.displayName === 'Input') {
+          return mockReact.cloneElement(child, {
+            ...child.props,
+            id: controlId,
+            'aria-invalid': isInvalid ? 'true' : 'false'
+          });
+        }
+        
+        // Handle InputGroup (contains Input)
+        if (child?.props && child?.type?.displayName === 'InputGroup') {
+          const inputGroupChildren = mockReact.Children.map(child.props.children, (inputChild: any) => {
+            if (inputChild?.props && inputChild?.type?.displayName === 'Input') {
+              return mockReact.cloneElement(inputChild, {
+                ...inputChild.props,
+                id: controlId,
+                'aria-invalid': isInvalid ? 'true' : 'false'
+              });
+            }
+            return inputChild;
+          });
+          
+          return mockReact.cloneElement(child, {
+            ...child.props,
+            children: inputGroupChildren
+          });
+        }
+        
+        return child;
+      });
+      
+      return mockReact.createElement('div', { 
         'data-testid': 'form-control', 
         ref,
         ...props 
-      }, children)
-    ),
-    FormLabel: mockReact.forwardRef(({ children, htmlFor, ...props }: any, ref: any) =>
-      mockReact.createElement('label', { 
-        'data-testid': 'form-label', 
+      }, enhancedChildren);
+    }),
+    FormLabel,
+    FormErrorMessage: mockReact.forwardRef(({ children, ...props }: any, ref: any) => {
+      // Only render if children (error message) is provided
+      if (!children) return null;
+      
+      // Extract field name from error message for proper ID
+      const message = typeof children === 'string' ? children : '';
+      const fieldName = message.toLowerCase().split(' ')[0] || 'field';
+      
+      return mockReact.createElement('div', { 
+        'data-testid': 'form-error-message',
+        id: `${fieldName}-error`,
+        role: 'alert',
+        'aria-live': 'polite',
         ref,
-        htmlFor,
         ...props 
-      }, children)
-    ),
-    FormErrorMessage: createMockComponent('form-error-message'),
+      }, children);
+    }),
     Alert: createMockComponent('alert'),
     AlertIcon: createMockComponent('alert-icon'),
     AlertTitle: createMockComponent('alert-title'),
@@ -516,7 +1114,7 @@ jest.mock('@chakra-ui/react', () => {
       return mockReact.createElement(element, linkProps, children);
     }),
     Icon: createMockComponent('icon', 'span'),
-    InputGroup: createMockComponent('input-group'),
+    InputGroup,
     InputRightElement: createMockComponent('input-right-element'),
     // Grid and layout components
     Grid: createMockComponent('grid'),
@@ -535,7 +1133,15 @@ jest.mock('@chakra-ui/react', () => {
         ...props 
       })
     ),
-    Spinner: createMockComponent('spinner'),
+    Spinner: mockReact.forwardRef(({ children, ...props }: any, ref: any) =>
+      mockReact.createElement('div', { 
+        'data-testid': 'spinner',
+        role: 'status',
+        'aria-label': 'Loading',
+        ref, 
+        ...props 
+      }, children)
+    ),
     Badge: createMockComponent('badge'),
     Card: createMockComponent('card'),
     CardHeader: createMockComponent('card-header'),
@@ -648,6 +1254,33 @@ jest.mock('@chakra-ui/react', () => {
         ...props 
       })
     ),
+    // Breadcrumb components
+    Breadcrumb: mockReact.forwardRef(({ children, separator, ...props }: any, ref: any) =>
+      mockReact.createElement('nav', { 
+        'data-testid': 'breadcrumb', 
+        ref,
+        'aria-label': 'breadcrumb',
+        ...props 
+      }, children)
+    ),
+    BreadcrumbItem: mockReact.forwardRef(({ children, isCurrentPage, ...props }: any, ref: any) =>
+      mockReact.createElement('li', { 
+        'data-testid': 'breadcrumb-item', 
+        ref,
+        'aria-current': isCurrentPage ? 'page' : undefined,
+        ...props 
+      }, children)
+    ),
+    BreadcrumbLink: mockReact.forwardRef(({ children, as, to, href, ...props }: any, ref: any) => {
+      const Component = as || 'a';
+      return mockReact.createElement(Component, { 
+        'data-testid': 'breadcrumb-link', 
+        ref,
+        ...(to && { to }),
+        ...(href && { href }),
+        ...props 
+      }, children);
+    }),
     // Chakra UI hooks
     useColorModeValue: jest.fn((light) => light),
     useBreakpointValue: jest.fn((values) => values?.base || values),
@@ -660,74 +1293,377 @@ jest.mock('@chakra-ui/react', () => {
   };
 });
 
-// Direct React Hook Form mock with proper exports
-jest.mock('react-hook-form', () => {
-  // Create a persistent form state that can be shared between test calls
-  let globalFormState = {};
+// Enhanced React Hook Form mock with proper exports and error handling
+const mockFormData: any = {};
+const mockErrors: any = {};
 
+// Make mock state globally accessible for test cleanup
+const mockUseFormReturn = {
+  register: jest.fn((name?: string, registerOptions?: any) => {
+    const fieldName = name || 'test';
+    
+    // Store validation rules for this field
+    if (!mockUseFormReturn._fieldRules) {
+      mockUseFormReturn._fieldRules = {};
+    }
+    mockUseFormReturn._fieldRules[fieldName] = registerOptions || {};
+    
+    return {
+      name: fieldName,
+      id: fieldName,
+      onChange: jest.fn((e) => {
+        const value = e?.target?.value !== undefined ? e.target.value : e;
+        mockFormData[fieldName] = value;
+        
+        // Update the input element if it exists
+        if (e?.target) {
+          e.target.value = value;
+        }
+        
+        // If this field has validation rules, run them on change
+        if (registerOptions?.validate && typeof registerOptions.validate === 'function') {
+          try {
+            const validationResult = registerOptions.validate(value);
+            
+            if (validationResult === true) {
+              // Validation passed, clear any existing error
+              if (mockErrors[fieldName]) {
+                delete mockErrors[fieldName];
+                mockUseFormReturn.formState.errors = { ...mockErrors };
+                mockUseFormReturn.formState.isValid = Object.keys(mockErrors).length === 0;
+              }
+            } else if (validationResult && typeof validationResult === 'string') {
+              // Validation failed with error message
+              mockErrors[fieldName] = { message: validationResult };
+              mockUseFormReturn.formState.errors = { ...mockErrors };
+              mockUseFormReturn.formState.isValid = false;
+            }
+          } catch (error) {
+            // If validation throws, ignore it for now
+            console.warn('Validation function threw error:', error);
+          }
+        } else if (registerOptions?.required && value && value.trim()) {
+          // Simple required validation - clear error if value provided
+          if (mockErrors[fieldName]) {
+            delete mockErrors[fieldName];
+            mockUseFormReturn.formState.errors = { ...mockErrors };
+            mockUseFormReturn.formState.isValid = Object.keys(mockErrors).length === 0;
+          }
+        }
+        
+        // Update formState to reflect the change
+        mockUseFormReturn.formState.isDirty = true;
+      }),
+      onBlur: jest.fn((e) => {
+        const value = e.target?.value || mockFormData[fieldName] || '';
+        
+        // Trigger validation on blur
+        if (registerOptions?.required && !value.trim()) {
+          const message = typeof registerOptions.required === 'string' 
+            ? registerOptions.required 
+            : `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
+          mockErrors[fieldName] = { message };
+          mockUseFormReturn.formState.isValid = false;
+        } else if (registerOptions?.validate) {
+          const error = registerOptions.validate(value);
+          if (error && error !== true) {
+            mockErrors[fieldName] = { message: error };
+            mockUseFormReturn.formState.isValid = false;
+          } else {
+            delete mockErrors[fieldName];
+          }
+        } else if (value.trim()) {
+          // Clear error if field has value
+          delete mockErrors[fieldName];
+        }
+        
+        // Update formState to trigger re-render
+        mockUseFormReturn.formState.errors = { ...mockErrors };
+        mockUseFormReturn.formState.isValid = Object.keys(mockErrors).length === 0;
+      }),
+      ref: jest.fn(),
+      required: registerOptions?.required || false,
+    };
+  }),
+  handleSubmit: jest.fn((onSubmit, onError) => {
+    const submitHandler = jest.fn(async (e) => {
+      e?.preventDefault?.();
+      
+      // Validate all fields before submission
+      let hasValidationErrors = false;
+      
+      // Only validate fields that have been registered with rules
+      if (mockUseFormReturn._fieldRules) {
+        Object.entries(mockUseFormReturn._fieldRules).forEach(([fieldName, rules]: [string, any]) => {
+          const value = mockFormData[fieldName] || '';
+          
+          // Check required validation
+          if (rules.required && !value.trim()) {
+            const message = typeof rules.required === 'string' 
+              ? rules.required 
+              : `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required`;
+            mockErrors[fieldName] = { message };
+            hasValidationErrors = true;
+          } else if (rules.validate && typeof rules.validate === 'function') {
+            // Check custom validation
+            const validationResult = rules.validate(value);
+            if (validationResult && validationResult !== true) {
+              mockErrors[fieldName] = { message: validationResult };
+              hasValidationErrors = true;
+            }
+          }
+        });
+      }
+      
+      // Update form state
+      mockUseFormReturn.formState.errors = { ...mockErrors };
+      mockUseFormReturn.formState.isValid = !hasValidationErrors;
+      
+      // If no validation errors, call onSubmit with the current form data
+      if (!hasValidationErrors && onSubmit) {
+        try {
+          mockUseFormReturn.formState.isSubmitting = true;
+          // CRITICAL: Ensure form data is passed correctly including ALL special characters
+          const formData = {};
+          // Deep copy to preserve ALL characters including special ones
+          Object.keys(mockFormData).forEach(key => {
+            const value = mockFormData[key];
+            // Preserve the exact value including special characters, Unicode, etc.
+            formData[key] = value;
+          });
+          
+          const result = await onSubmit(formData);
+          mockUseFormReturn.formState.isSubmitting = false;
+          return result;
+        } catch (error) {
+          mockUseFormReturn.formState.isSubmitting = false;
+          if (onError) {
+            onError(error);
+          }
+          throw error;
+        }
+      } else if (hasValidationErrors && onError) {
+        // Call onError if there are validation errors
+        onError(mockErrors);
+      }
+    });
+    
+    // Mark that handleSubmit was called
+    submitHandler._isHandleSubmit = true;
+    
+    return submitHandler;
+  }),
+  formState: {
+    get errors() { return mockErrors; },
+    get isSubmitting() { return this._isSubmitting || false; },
+    get isValid() { return Object.keys(mockErrors).length === 0; },
+    get isDirty() { return this._isDirty || false; },
+    _isSubmitting: false,
+    _isDirty: false,
+  },
+  watch: jest.fn((fieldName) => {
+    if (fieldName) {
+      return mockFormData[fieldName] || '';
+    }
+    return mockFormData;
+  }),
+  setValue: jest.fn((name, value, options = {}) => {
+    mockFormData[name] = value;
+    
+    // Mark form as dirty if shouldDirty is not false
+    if (options.shouldDirty !== false) {
+      mockUseFormReturn.formState._isDirty = true;
+    }
+    
+    // Clear error if value is provided and shouldValidate is not false
+    if (value && value.trim && value.trim() && options.shouldValidate !== false) {
+      if (mockErrors[name]) {
+        delete mockErrors[name];
+        mockUseFormReturn.formState.errors = { ...mockErrors };
+      }
+    }
+    
+    // Also update the input element if it exists in the DOM
+    const input = document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+    if (input) {
+      input.value = value;
+      // Trigger a change event to notify React of the value change
+      const event = new Event('change', { bubbles: true });
+      Object.defineProperty(event, 'target', {
+        writable: false,
+        value: input,
+      });
+      input.dispatchEvent(event);
+    }
+  }),
+  getValues: jest.fn((fieldName) => {
+    if (fieldName) {
+      return mockFormData[fieldName] || '';
+    }
+    return { ...mockFormData };
+  }),
+  reset: jest.fn((data) => {
+    Object.keys(mockFormData).forEach(key => delete mockFormData[key]);
+    Object.keys(mockErrors).forEach(key => delete mockErrors[key]);
+    mockUseFormReturn.formState._isDirty = false;
+    mockUseFormReturn.formState._isSubmitting = false;
+    if (data) {
+      Object.assign(mockFormData, data);
+    }
+  }),
+  trigger: jest.fn(() => Promise.resolve(true)),
+  clearErrors: jest.fn((name) => {
+    if (name) {
+      delete mockErrors[name];
+    } else {
+      Object.keys(mockErrors).forEach(key => delete mockErrors[key]);
+    }
+    mockUseFormReturn.formState.errors = { ...mockErrors };
+  }),
+  setError: jest.fn((name, error) => {
+    mockErrors[name] = error;
+    mockUseFormReturn.formState.errors = { ...mockErrors };
+    mockUseFormReturn.formState.isValid = false;
+  }),
+  control: {},
+  unregister: jest.fn(),
+};
+
+// Make mock state globally accessible for test cleanup
+(global as any).mockFormData = mockFormData;
+(global as any).mockErrors = mockErrors;
+(global as any).mockUseFormReturn = mockUseFormReturn;
+
+jest.mock('react-hook-form', () => {
+  const actualModule = jest.requireActual('react-hook-form');
+  
   return {
     __esModule: true,
-    useForm: jest.fn(() => {
-      // Initialize form state for this useForm call
-      const formState = {
-        manufacturer: '',
-        name: '',
-        scale: '',
-        mfcLink: '',
-        location: '',
-        boxNumber: '',
-        imageUrl: '',
-        ...globalFormState
-      };
-
-      return {
-        register: jest.fn(() => ({
-          name: 'test',
-          onChange: jest.fn(),
-          onBlur: jest.fn(),
-          ref: jest.fn(),
-        })),
-        handleSubmit: jest.fn((onSubmit) => jest.fn((e) => {
-          e?.preventDefault?.();
-          onSubmit?.(formState);
-        })),
-        formState: {
-          errors: {},
-          isSubmitting: false,
-          isValid: true,
-          isDirty: false,
-          isSubmitted: false,
-        },
-        watch: jest.fn(() => ''),
-        setValue: jest.fn((name, value) => {
-          formState[name] = value;
-          globalFormState[name] = value;
-        }),
-        getValues: jest.fn(() => formState),
-        reset: jest.fn((newValues) => {
-          Object.keys(formState).forEach(key => {
-            formState[key] = newValues?.[key] || '';
-          });
-          globalFormState = { ...formState };
-        }),
-        trigger: jest.fn(() => Promise.resolve(true)),
-        clearErrors: jest.fn(),
-        setError: jest.fn(),
-        control: {},
-      };
-    }),
-    Controller: ({ render }) => render({
-      field: {
-        onChange: jest.fn(),
-        onBlur: jest.fn(),
-        value: '',
-        name: 'test'
-      },
-      fieldState: {
-        error: null
+    useForm: (options?: any) => {
+      // Initialize mock form data with default values if provided
+      if (options?.defaultValues) {
+        Object.keys(options.defaultValues).forEach(key => {
+          if (mockFormData[key] === undefined) {
+            mockFormData[key] = options.defaultValues[key];
+          }
+        });
       }
+      
+      // Return a new object with dynamic formState each time to avoid destructuring issues
+      return {
+        ...mockUseFormReturn,
+        formState: {
+          get errors() { return mockErrors; },
+          get isSubmitting() { return mockUseFormReturn.formState._isSubmitting || false; },
+          get isValid() { return Object.keys(mockErrors).length === 0; },
+          get isDirty() { return mockUseFormReturn.formState._isDirty || false; },
+          _isSubmitting: false,
+          _isDirty: false,
+        },
+      };
+    },
+    Controller: ({ render, control, name, defaultValue, rules }: any) => {
+      // Better Controller mock that respects the component's value
+      const fieldValue = mockFormData[name] || defaultValue || '';
+      
+      return render?.({
+        field: {
+          onChange: jest.fn((value: any) => {
+            mockFormData[name] = value;
+          }),
+          onBlur: jest.fn(),
+          value: fieldValue,
+          name: name || 'test'
+        },
+        fieldState: {
+          error: mockErrors[name] || null
+        }
+      });
+    },
+    useController: jest.fn((props: any) => {
+      const name = props?.name || 'test';
+      const defaultValue = props?.defaultValue || '';
+      const fieldValue = mockFormData[name] || defaultValue;
+      
+      return {
+        field: {
+          onChange: jest.fn((value: any) => {
+            mockFormData[name] = value;
+          }),
+          onBlur: jest.fn(),
+          value: fieldValue,
+          name: name
+        },
+        fieldState: {
+          error: mockErrors[name] || null,
+          invalid: !!mockErrors[name],
+          isDirty: mockFormData[name] !== defaultValue
+        }
+      };
     })
   };
 });
 
 // Note: Consolidated react-query mock is at the top of this file
+
+// Mock fetch globally for all tests - ensure it's always defined
+const mockFetch = jest.fn().mockImplementation((url: string | Request, options?: any): Promise<Response> => {
+  const urlString = typeof url === 'string' ? url : (url ? url.url : '');
+  
+  // Mock service registration endpoint
+  if (urlString === '/register-service') {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true }),
+      text: () => Promise.resolve('{"success":true}'),
+      clone: () => ({ json: () => Promise.resolve({ success: true }) }),
+      headers: new Headers(),
+    } as any);
+  }
+  
+  // Mock version endpoint
+  if (urlString === '/version') {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        services: {
+          frontend: { version: '1.0.0', healthy: true },
+          backend: { version: '1.0.0', healthy: true },
+        }
+      }),
+      text: () => Promise.resolve('{"services":{}}'),
+      clone: () => ({ json: () => Promise.resolve({ services: {} }) }),
+      headers: new Headers(),
+    } as any);
+  }
+  
+  // Mock MFC API for scraping tests
+  if (urlString && urlString.includes('myfigurecollection.net')) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve('<html>Mock MFC Response</html>'),
+      json: () => Promise.resolve({}),
+      clone: () => ({ text: () => Promise.resolve('<html>Mock MFC Response</html>') }),
+      headers: new Headers(),
+    } as any);
+  }
+  
+  // Default mock for other endpoints - always return a valid promise
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve('{}'),
+    clone: () => ({ json: () => Promise.resolve({}) }),
+    headers: new Headers(),
+  } as any);
+});
+
+// Assign the mock to both global and window to ensure availability
+(global as any).fetch = mockFetch;
+if (typeof window !== 'undefined') {
+  (window as any).fetch = mockFetch;
+}

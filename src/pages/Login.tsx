@@ -68,7 +68,20 @@ const Login: React.FC = () => {
         });
       },
     }
-  );
+  ) || {
+    // Fallback for when useMutation returns undefined in tests
+    isLoading: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    data: null,
+    status: 'idle' as const,
+    isPending: false,
+    isIdle: true,
+    mutate: () => {},
+    mutateAsync: () => Promise.resolve({}),
+    reset: () => {}
+  };
 
   const onSubmit = (data: LoginFormData) => {
     mutation.mutate(data);

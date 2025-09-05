@@ -7,8 +7,91 @@ import { CacheProvider } from '@emotion/react';
 // Removed createEmotionServer import
 import createCache from '@emotion/cache';
 
+// CRITICAL: Import REAL react-query and override it
+import * as ReactQuery from 'react-query';
+
+// Override useMutation globally in test environment
+if (process.env.NODE_ENV === 'test') {
+  // Create a proper mock that handles both single and dual argument forms
+  (ReactQuery as any).useMutation = jest.fn((arg1, arg2) => {
+    // Handle both useMutation(fn) and useMutation(fn, options) signatures
+    const mutationFn = typeof arg1 === 'function' ? arg1 : arg1?.mutationFn;
+    const options = typeof arg1 === 'function' ? arg2 : arg1;
+    
+    const mockMutate = jest.fn((variables) => {
+      // Simulate calling success callback if provided
+      if (options?.onSuccess) {
+        setTimeout(() => options.onSuccess({}, variables, {}), 0);
+      }
+    });
+    
+    const mockMutateAsync = jest.fn((variables) => {
+      // Simulate calling success callback if provided
+      if (options?.onSuccess) {
+        return Promise.resolve({}).then((data) => {
+          options.onSuccess(data, variables, {});
+          return data;
+        });
+      }
+      return Promise.resolve({});
+    });
+    
+    return {
+      isLoading: false,
+      isError: false,
+      isSuccess: false,
+      error: null,
+      data: null,
+      status: 'idle',
+      isPending: false,
+      isIdle: true,
+      mutate: mockMutate,
+      mutateAsync: mockMutateAsync,
+      reset: jest.fn(),
+      variables: undefined,
+      context: undefined
+    };
+  });
+  
+  (ReactQuery as any).useQuery = jest.fn((queryKey, queryFn, options) => {
+    return {
+      data: {},
+      isLoading: false,
+      isError: false,
+      error: null,
+      isSuccess: true,
+      refetch: jest.fn(),
+      isFetching: false,
+      isRefetching: false,
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      isFetchedAfterMount: true,
+      isPlaceholderData: false,
+      isPreviousData: false,
+      isStale: false,
+      remove: jest.fn()
+    };
+  });
+  
+  // Mock useQueryClient to return a proper mock client
+  (ReactQuery as any).useQueryClient = jest.fn(() => ({
+    invalidateQueries: jest.fn(),
+    refetchQueries: jest.fn(),
+    setQueryData: jest.fn(),
+    getQueryData: jest.fn(),
+    removeQueries: jest.fn(),
+    cancelQueries: jest.fn(),
+    resetQueries: jest.fn(),
+    isFetching: jest.fn(() => 0),
+    getQueryCache: jest.fn(),
+    getMutationCache: jest.fn(),
+    getDefaultOptions: jest.fn(() => ({}))
+  }));
+}
+
 // Mock QueryClient and QueryClientProvider directly for test-utils
-const MockQueryClientProvider = ({ children }: { children: React.ReactNode }) =>
+const MockQueryClientProvider = ({ children, client }: { children: React.ReactNode; client?: any }) =>
   React.createElement('div', { 'data-testid': 'query-client-provider' }, children);
 
 class MockQueryClient {

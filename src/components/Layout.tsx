@@ -41,23 +41,32 @@ const Layout: React.FC = () => {
     registerFrontend().then(() => {
       // Wait a brief moment for registration to complete
       setTimeout(() => {
-        fetch('/version')
-          .then(res => {
-            if (!res.ok) {
-              throw new Error(`HTTP error! status: ${res.status}`);
-            }
-            return res.json();
-          })
-          .then(data => {
-            setVersionInfo(data);
-            // Console log for developers
-            console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
-          })
-          .catch(err => {
-            console.error('Failed to fetch version info:', err);
+        if (typeof fetch !== 'undefined') {
+          const fetchPromise = fetch('/version');
+          if (fetchPromise && typeof fetchPromise.then === 'function') {
+            fetchPromise.then(res => {
+              if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+              }
+              return res.json();
+            })
+            .then(data => {
+              setVersionInfo(data);
+              // Console log for developers
+              console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
+            })
+            .catch(err => {
+              console.error('Failed to fetch version info:', err);
+              setVersionInfo(null);
+            });
+          } else {
+            console.warn('Fetch is undefined or fetch result is not a promise');
             setVersionInfo(null);
-          });
+          }
+        }
       }, 100);
+    }).catch(err => {
+      console.error('Failed to register frontend:', err);
     });
   }, []);
 

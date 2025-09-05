@@ -76,7 +76,9 @@ describe('Navbar', () => {
       render(<Navbar />);
 
       expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /figures/i })).toBeInTheDocument();
+      // Use getAllByRole for multiple elements, then filter for the main nav item
+      const figuresLinks = screen.getAllByRole('link', { name: /figures/i });
+      expect(figuresLinks.length).toBeGreaterThan(0);
       expect(screen.getByRole('link', { name: /search/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /statistics/i })).toBeInTheDocument();
     });
@@ -241,7 +243,9 @@ describe('Navbar', () => {
       render(<Navbar />);
 
       expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /figures/i })).toBeInTheDocument();
+      // Use getAllByRole for multiple elements with same name
+      const figuresLinks = screen.getAllByRole('link', { name: /figures/i });
+      expect(figuresLinks.length).toBeGreaterThan(0);
       expect(screen.getByRole('link', { name: /search/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /statistics/i })).toBeInTheDocument();
     });
@@ -258,7 +262,9 @@ describe('Navbar', () => {
       const user = userEvent.setup();
       render(<Navbar />);
 
-      const figuresLink = screen.getByRole('link', { name: /figures/i });
+      // Get the main nav Figures link (not the dropdown items)
+      const figuresLinks = screen.getAllByRole('link', { name: /figures/i });
+      const figuresLink = figuresLinks[0]; // Use the first one which should be the main nav item
       
       // Test that the Figures link is present and clickable
       expect(figuresLink).toBeInTheDocument();

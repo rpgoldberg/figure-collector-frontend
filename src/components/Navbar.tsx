@@ -227,11 +227,11 @@ const DesktopSubNav = ({ label, href, subLabel }: NavItem) => {
     <Link
       as={RouterLink}
       to={href ?? '#'}
-      role={'group'}
       display={'block'}
       p={2}
       rounded={'md'}
       _hover={{ bg: useColorModeValue('brand.50', 'gray.900') }}
+      aria-label={`Navigate to ${label}${subLabel ? `: ${subLabel}` : ''}`}
     >
       <Stack direction={'row'} align={'center'}>
         <Box>

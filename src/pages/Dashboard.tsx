@@ -117,6 +117,7 @@ const Dashboard: React.FC = () => {
                 to="/figures" 
                 variant="outline" 
                 size="sm"
+                aria-label="View All Figures"
               >
                 View All
               </Button>
@@ -171,6 +172,7 @@ const Dashboard: React.FC = () => {
                   size="sm" 
                   width="100%" 
                   mt={4}
+                  aria-label="View Detailed Figure Statistics"
                 >
                   View All Statistics
                 </Button>

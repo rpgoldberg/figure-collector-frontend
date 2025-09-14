@@ -33,6 +33,7 @@ describe('API Module', () => {
   let mockAxiosInstance: any;
   let requestInterceptor: any;
   let responseInterceptor: any;
+  let mockApi: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -42,10 +43,10 @@ describe('API Module', () => {
 
     // Create mock axios instance
     mockAxiosInstance = {
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
+      get: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      post: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      put: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      delete: jest.fn().mockResolvedValue({ data: { data: {} } }),
       interceptors: {
         request: {
           use: jest.fn((handler) => {
@@ -73,7 +74,7 @@ describe('API Module', () => {
 
     // Re-import to trigger module initialization
     jest.isolateModules(() => {
-      require('../index');
+      mockApi = require('../index');
     });
   });
 
@@ -150,20 +151,13 @@ describe('API Module', () => {
   });
 
   describe('API Functions Coverage - Lines 69-93', () => {
-    beforeEach(() => {
-      // Setup for API function tests
-      mockAxiosInstance.post.mockResolvedValue({ data: { data: {} } });
-      mockAxiosInstance.get.mockResolvedValue({ data: { data: {} } });
-      mockAxiosInstance.put.mockResolvedValue({ data: { data: {} } });
-    });
-
     it('should cover refreshToken lines 69-70', async () => {
       const mockToken = { token: 'new-refresh-token-123' };
       mockAxiosInstance.post.mockResolvedValueOnce({
         data: { data: mockToken }
       });
 
-      const result = await api.refreshToken();
+      const result = await mockApi.refreshToken();
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/refresh');
       expect(result).toEqual(mockToken);
@@ -174,7 +168,7 @@ describe('API Module', () => {
         data: { success: true }
       });
 
-      await api.logoutUser();
+      await mockApi.logoutUser();
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/logout');
     });
@@ -184,7 +178,7 @@ describe('API Module', () => {
         data: { success: true }
       });
 
-      await api.logoutAllSessions();
+      await mockApi.logoutAllSessions();
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/logout-all');
     });
@@ -198,7 +192,7 @@ describe('API Module', () => {
         data: { data: mockSessions }
       });
 
-      const result = await api.getUserSessions();
+      const result = await mockApi.getUserSessions();
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/auth/sessions');
       expect(result).toEqual(mockSessions);
@@ -215,7 +209,7 @@ describe('API Module', () => {
         data: { data: mockProfile }
       });
 
-      const result = await api.getUserProfile();
+      const result = await mockApi.getUserProfile();
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/users/profile');
       expect(result).toEqual(mockProfile);
@@ -233,7 +227,7 @@ describe('API Module', () => {
         data: { data: updatedProfile }
       });
 
-      const result = await api.updateUserProfile(updateData);
+      const result = await mockApi.updateUserProfile(updateData);
 
       expect(mockAxiosInstance.put).toHaveBeenCalledWith('/users/profile', updateData);
       expect(result).toEqual(updatedProfile);

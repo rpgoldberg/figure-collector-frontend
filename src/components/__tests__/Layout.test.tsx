@@ -1,120 +1,468 @@
+/**
+ * Comprehensive tests for Layout component
+ * Targeting uncovered lines: 29, 36-45, 51, 81, 85, 95-138
+ */
 import React from 'react';
-import { screen } from '@testing-library/react';
-import { render } from '../../test-utils';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
 import Layout from '../Layout';
 
-// Mock child components for focused unit testing
+// Mock child components
 jest.mock('../Navbar', () => {
-  return function MockNavbar() {
-    return <nav role="navigation">Navbar</nav>;
+  return function Navbar() {
+    return <div data-testid="mock-navbar">Navbar</div>;
   };
 });
 
 jest.mock('../Sidebar', () => {
-  return function MockSidebar() {
-    return <aside role="complementary">Sidebar</aside>;
+  return function Sidebar() {
+    return <div data-testid="mock-sidebar">Sidebar</div>;
   };
 });
 
 // Mock Outlet from react-router-dom
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
-  Outlet: () => <main role="main">Page Content</main>,
+  Outlet: () => <div data-testid="mock-outlet">Page Content</div>,
 }));
 
-describe('Layout', () => {
-  // Mock screen size to medium for consistent testing
-  Object.defineProperty(window, 'innerWidth', {
-    writable: true,
-    configurable: true,
-    value: 1024,
-  });
-  
-  Object.defineProperty(window, 'innerHeight', {
-    writable: true,
-    configurable: true,
-    value: 768,
-  });
+// Mock fetch
+global.fetch = jest.fn();
 
+const renderLayout = () => {
+  return render(
+    <ChakraProvider>
+      <BrowserRouter>
+        <Layout />
+      </BrowserRouter>
+    </ChakraProvider>
+  );
+};
+
+describe('Layout Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (global.fetch as jest.Mock).mockClear();
+    jest.useFakeTimers();
   });
 
-  describe('component rendering', () => {
-    it('should render layout structure correctly', () => {
-      render(<Layout />);
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
 
-      expect(screen.getByRole('navigation')).toBeInTheDocument();
-      
-      // Check for complementary element including hidden ones due to responsive design
-      expect(screen.getByRole('complementary', { hidden: true })).toBeInTheDocument();
-      
-      expect(screen.getByRole('main')).toBeInTheDocument();
-      expect(screen.getByText('Figure Collector')).toBeInTheDocument();
-    });
+  describe('Basic rendering', () => {
+    it('should render basic layout structure', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true }) // register-service
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true }); // version
 
-    it('should render sidebar only on medium+ screens', () => {
-      render(<Layout />);
+      renderLayout();
 
-      const sidebar = screen.getByRole('complementary', { hidden: true });
-      expect(sidebar).toBeInTheDocument();
-      
-      // The sidebar container should have responsive display classes
-      const sidebarContainer = screen.getByTestId('sidebar');
-      expect(sidebarContainer).toBeInTheDocument();
-    });
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
 
-    it('should render footer with proper styling', () => {
-      render(<Layout />);
-
-      const footer = screen.getByRole('contentinfo');
-      expect(footer).toBeInTheDocument();
-      expect(screen.getByText('Figure Collector')).toBeInTheDocument();
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
+      expect(screen.getByTestId('navbar')).toBeInTheDocument();
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+      expect(screen.getByTestId('outlet')).toBeInTheDocument();
+      expect(screen.getByTestId('footer')).toBeInTheDocument();
     });
   });
 
-  describe('responsive behavior', () => {
-    it('should hide sidebar on smaller screens', () => {
-      render(<Layout />);
+  describe('Line 29: response.json() after registration', () => {
+    it('should cover response.json() call in registerFrontend', async () => {
+      const mockResponse = { success: true, message: 'Registered' };
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockResponse),
+          ok: true
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue({}),
+          ok: true
+        });
 
-      const sidebarContainer = screen.getByTestId('sidebar');
-      
-      // The container should have responsive display classes
-      // This tests that the structure is correct for responsive behavior
-      expect(sidebarContainer).toBeInTheDocument();
+      renderLayout();
+
+      await waitFor(() => {
+        const firstCall = (global.fetch as jest.Mock).mock.calls[0];
+        expect(firstCall[0]).toBe('/register-service');
+        expect(firstCall[1].method).toBe('POST');
+        expect(JSON.parse(firstCall[1].body)).toEqual({
+          serviceName: 'frontend',
+          version: '1.1.0',
+          name: 'figure-collector-frontend'
+        });
+      });
     });
 
-    it('should maintain proper layout structure on all screen sizes', () => {
-      render(<Layout />);
+    it('should handle registration failure gracefully', async () => {
+      (global.fetch as jest.Mock)
+        .mockRejectedValueOnce(new Error('Registration failed'))
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true });
 
-      // Main container should be present
-      const mainContent = screen.getByRole('main');
-      expect(mainContent.parentElement).toBeInTheDocument();
-      
-      // Footer should always be present
-      expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+      });
     });
   });
 
-  describe('accessibility', () => {
-    it('should have proper semantic HTML structure', () => {
-      render(<Layout />);
+  describe('Lines 36-45: fetchVersionInfo function and error handling', () => {
+    it('should cover fetchVersionInfo success path', async () => {
+      const mockVersionData = {
+        application: { version: '1.2.0', releaseDate: '2024-01-15' },
+        services: {
+          frontend: { version: '1.1.0', status: 'ok' },
+          backend: { version: '2.0.0', status: 'ok' }
+        }
+      };
 
-      expect(screen.getByRole('navigation')).toBeInTheDocument(); // Navbar
-      expect(screen.getByRole('complementary', { hidden: true })).toBeInTheDocument(); // Sidebar
-      expect(screen.getByRole('main')).toBeInTheDocument(); // Main content
-      expect(screen.getByRole('contentinfo')).toBeInTheDocument(); // Footer
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({
+          json: async () => mockVersionData,
+          ok: true
+        });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(screen.getByText(/v1.2.0 • 2024-01-15/)).toBeInTheDocument();
+      });
+    });
+
+    it('should cover fetchVersionInfo HTTP error path (line 39-40)', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Server error' })
+        });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        // Should not show version info when fetch fails
+        expect(screen.queryByText(/v\d+\.\d+\.\d+/)).not.toBeInTheDocument();
+      });
+    });
+
+    it('should cover fetchVersionInfo catch block (lines 43-45)', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockRejectedValueOnce(new Error('Network error'));
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        // Should not show version info when network fails
+        expect(screen.queryByText(/v\d+\.\d+\.\d+/)).not.toBeInTheDocument();
+      });
     });
   });
 
-  describe('error boundaries', () => {
-    it('should handle component rendering errors gracefully', () => {
-      // Mock console.error to avoid noise in test output
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+  describe('Line 51: setTimeout callback', () => {
+    it('should cover setTimeout callback execution', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true });
 
-      expect(() => render(<Layout />)).not.toThrow();
+      renderLayout();
 
-      consoleSpy.mockRestore();
+      // Fast forward the setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(global.fetch).toHaveBeenNthCalledWith(2, '/version');
+      });
+    });
+  });
+
+  describe('Line 81: versionInfo conditional (1 of 2 conditions)', () => {
+    it('should show version info when versionInfo exists', async () => {
+      const mockVersionData = {
+        application: { version: '1.0.0', releaseDate: '2024-01-01' }
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(screen.getByText(/v1.0.0 • 2024-01-01/)).toBeInTheDocument();
+      });
+    });
+
+    it('should not show version info when versionInfo is null', async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockRejectedValueOnce(new Error('No version data'));
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/v\d+\.\d+\.\d+/)).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Line 85: application?.version and releaseDate fallbacks', () => {
+    it('should use fallback values when application data is missing', async () => {
+      const mockVersionData = {
+        services: {
+          frontend: { version: '1.0.0', status: 'ok' }
+        }
+        // No application field
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(screen.getByText(/vunknown • unknown/)).toBeInTheDocument();
+      });
+    });
+
+    it('should use fallback when application.version is missing', async () => {
+      const mockVersionData = {
+        application: { releaseDate: '2024-01-01' }, // No version
+        services: {}
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      await waitFor(() => {
+        expect(screen.getByText(/vunknown • 2024-01-01/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Lines 95-138: Popover content rendering', () => {
+    it('should render service badges and status', async () => {
+      const mockVersionData = {
+        application: { version: '1.0.0', releaseDate: '2024-01-01' },
+        services: {
+          frontend: { version: '1.1.0', status: 'ok' },
+          backend: { version: '2.0.0', status: 'error' },
+          scraper: { version: '1.5.0', status: 'ok' }
+        }
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      // Wait for version info to load first
+      await waitFor(() => {
+        expect(screen.getByText(/v1.0.0 • 2024-01-01/)).toBeInTheDocument();
+      });
+
+      // Trigger popover by hovering over version text
+      const versionText = screen.getByText(/v1.0.0 • 2024-01-01/);
+      fireEvent.mouseEnter(versionText);
+
+      await waitFor(() => {
+        expect(screen.getByText('Service Versions')).toBeInTheDocument();
+        expect(screen.getByText('Frontend:')).toBeInTheDocument();
+        expect(screen.getByText('Backend:')).toBeInTheDocument();
+        expect(screen.getByText('Scraper:')).toBeInTheDocument();
+        expect(screen.getByText('v1.1.0')).toBeInTheDocument();
+        expect(screen.getByText('v2.0.0')).toBeInTheDocument();
+        expect(screen.getByText('v1.5.0')).toBeInTheDocument();
+      });
+    });
+
+    it('should render validation status when present', async () => {
+      const mockVersionData = {
+        application: { version: '1.0.0', releaseDate: '2024-01-01' },
+        services: {
+          frontend: { version: '1.1.0', status: 'ok' }
+        },
+        validation: {
+          valid: true,
+          status: 'tested',
+          message: 'All systems operational'
+        }
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      // Wait for version info to load first
+      await waitFor(() => {
+        expect(screen.getByText(/v1.0.0 • 2024-01-01/)).toBeInTheDocument();
+      });
+
+      // Trigger popover by hovering over version text
+      const versionText = screen.getByText(/v1.0.0 • 2024-01-01/);
+      fireEvent.mouseEnter(versionText);
+
+      await waitFor(() => {
+        expect(screen.getByText('Validation:')).toBeInTheDocument();
+        expect(screen.getByText('Tested')).toBeInTheDocument();
+        expect(screen.getByText('All systems operational')).toBeInTheDocument();
+      });
+    });
+
+    it('should render validation warnings when present', async () => {
+      const mockVersionData = {
+        application: { version: '1.0.0', releaseDate: '2024-01-01' },
+        services: {
+          frontend: { version: '1.1.0', status: 'ok' }
+        },
+        validation: {
+          valid: false,
+          status: 'warning',
+          message: 'Minor issues detected',
+          warnings: ['Version mismatch', 'Performance degraded']
+        }
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      // Wait for version info to load first
+      await waitFor(() => {
+        expect(screen.getByText(/v1.0.0 • 2024-01-01/)).toBeInTheDocument();
+      });
+
+      // Trigger popover by hovering over version text
+      const versionText = screen.getByText(/v1.0.0 • 2024-01-01/);
+      fireEvent.mouseEnter(versionText);
+
+      await waitFor(() => {
+        expect(screen.getByText('Validation:')).toBeInTheDocument();
+        expect(screen.getByText('Warning')).toBeInTheDocument();
+        expect(screen.getByText('Minor issues detected')).toBeInTheDocument();
+        expect(screen.getByText('• Version mismatch')).toBeInTheDocument();
+        expect(screen.getByText('• Performance degraded')).toBeInTheDocument();
+      });
+    });
+
+    it('should handle different validation statuses', async () => {
+      const mockVersionData = {
+        application: { version: '1.0.0', releaseDate: '2024-01-01' },
+        services: {
+          frontend: { version: '1.1.0', status: 'ok' }
+        },
+        validation: {
+          valid: false,
+          status: 'compatible'
+        }
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      // Wait for version info to load first
+      await waitFor(() => {
+        expect(screen.getByText(/v1.0.0 • 2024-01-01/)).toBeInTheDocument();
+      });
+
+      // Trigger popover by hovering over version text
+      const versionText = screen.getByText(/v1.0.0 • 2024-01-01/);
+      fireEvent.mouseEnter(versionText);
+
+      await waitFor(() => {
+        expect(screen.getByText('Compatible')).toBeInTheDocument();
+      });
+    });
+
+    it('should handle missing service version and status', async () => {
+      const mockVersionData = {
+        application: { version: '1.0.0', releaseDate: '2024-01-01' },
+        services: {
+          frontend: {}, // No version or status
+          backend: { version: '2.0.0' }, // No status
+          scraper: { status: 'ok' } // No version
+        }
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ json: async () => ({}), ok: true })
+        .mockResolvedValueOnce({ json: async () => mockVersionData, ok: true });
+
+      renderLayout();
+
+      // Advance timers to trigger setTimeout
+      jest.advanceTimersByTime(100);
+
+      // Wait for version info to load first
+      await waitFor(() => {
+        expect(screen.getByText(/v1.0.0 • 2024-01-01/)).toBeInTheDocument();
+      });
+
+      // Trigger popover by hovering over version text
+      const versionText = screen.getByText(/v1.0.0 • 2024-01-01/);
+      fireEvent.mouseEnter(versionText);
+
+      await waitFor(() => {
+        // Should show 'unknown' for missing values
+        expect(screen.getAllByText('vunknown')).toHaveLength(2); // frontend and scraper
+        expect(screen.getAllByText('(unknown)')).toHaveLength(2); // frontend and backend status
+      });
     });
   });
 });

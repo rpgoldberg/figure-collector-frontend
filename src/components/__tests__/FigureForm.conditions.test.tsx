@@ -217,16 +217,25 @@ describe('FigureForm Uncovered Conditions', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
+        json: async () => ({ message: 'Server error' }),
       });
 
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/error');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/123');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/figures/scrape-mfc',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mfcLink: 'https://myfigurecollection.net/item/123' }),
+          })
+        );
+      }, { timeout: 2000 });
     });
 
     it('should cover line 183 - response.success is false', async () => {
@@ -241,11 +250,19 @@ describe('FigureForm Uncovered Conditions', () => {
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/fail');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/456');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/figures/scrape-mfc',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mfcLink: 'https://myfigurecollection.net/item/456' }),
+          })
+        );
+      }, { timeout: 2000 });
     });
 
     it('should cover line 187 - catch block', async () => {
@@ -254,46 +271,50 @@ describe('FigureForm Uncovered Conditions', () => {
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/network');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/789');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/figures/scrape-mfc',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mfcLink: 'https://myfigurecollection.net/item/789' }),
+          })
+        );
+      }, { timeout: 2000 });
     });
   });
 
   describe('Line 224: Scale conversion (3 of 4 conditions)', () => {
-    it('should test all decimal to fraction conversions', async () => {
+    it('should test all scale format conditions', async () => {
       renderFigureForm();
       const scaleInput = screen.getByPlaceholderText(/1\/8, 1\/7/i) as HTMLInputElement;
 
-      const conversions = [
-        { decimal: '0.5', fraction: '1/2' },
-        { decimal: '0.333333', fraction: '1/3' },
-        { decimal: '0.25', fraction: '1/4' },
-        { decimal: '0.2', fraction: '1/5' },
-        { decimal: '0.166667', fraction: '1/6' },
-        { decimal: '0.142857', fraction: '1/7' },
-        { decimal: '0.125', fraction: '1/8' },
-        { decimal: '0.111111', fraction: '1/9' },
-        { decimal: '0.1', fraction: '1/10' },
-        { decimal: '0.083333', fraction: '1/12' },
-        { decimal: '0.0625', fraction: '1/16' },
-      ];
-
-      for (const { decimal } of conversions) {
-        await userEvent.clear(scaleInput);
-        await userEvent.type(scaleInput, decimal);
-        fireEvent.blur(scaleInput);
-        // Value should be converted
-        expect(scaleInput.value).toBeTruthy();
-      }
-
-      // Test non-matching decimal
+      // Condition 1: Input already contains '/' - should return unchanged
       await userEvent.clear(scaleInput);
-      await userEvent.type(scaleInput, '0.777');
+      await userEvent.type(scaleInput, '1/8');
       fireEvent.blur(scaleInput);
-      expect(scaleInput.value).toBe('0.777');
+      expect(scaleInput.value).toBe('1/8');
+
+      // Condition 2: Valid decimal <= 1 - should convert to fraction
+      await userEvent.clear(scaleInput);
+      await userEvent.type(scaleInput, '0.125');
+      fireEvent.blur(scaleInput);
+      expect(scaleInput.value).toBe('1/8');
+
+      // Condition 3: Non-numeric input - should return unchanged
+      await userEvent.clear(scaleInput);
+      await userEvent.type(scaleInput, 'Nendoroid');
+      fireEvent.blur(scaleInput);
+      expect(scaleInput.value).toBe('Nendoroid');
+
+      // Condition 4: Numeric but > 1 or doesn't convert well - should return unchanged
+      await userEvent.clear(scaleInput);
+      await userEvent.type(scaleInput, '2.5');
+      fireEvent.blur(scaleInput);
+      expect(scaleInput.value).toBe('2.5');
     });
   });
 
@@ -315,14 +336,14 @@ describe('FigureForm Uncovered Conditions', () => {
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/manual');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/1001');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
-
-      const imageInput = screen.getByPlaceholderText(/example\.com\/image\.jpg/i) as HTMLInputElement;
-      expect(imageInput.value).toBe('MANUAL_EXTRACT:reason');
+        const imageInput = screen.getByPlaceholderText(/example\.com\/image\.jpg/i) as HTMLInputElement;
+        // The component should not set MANUAL_EXTRACT values in the form
+        expect(imageInput.value).toBe('');
+      }, { timeout: 2000 });
     });
 
     it('should test normal imageUrl condition', async () => {
@@ -342,14 +363,13 @@ describe('FigureForm Uncovered Conditions', () => {
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/normal');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/1002');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
-
-      const imageInput = screen.getByPlaceholderText(/example\.com\/image\.jpg/i) as HTMLInputElement;
-      expect(imageInput.value).toBe('https://example.com/normal.jpg');
+        const imageInput = screen.getByPlaceholderText(/example\.com\/image\.jpg/i) as HTMLInputElement;
+        expect(imageInput.value).toBe('https://example.com/normal.jpg');
+      }, { timeout: 2000 });
     });
   });
 
@@ -422,27 +442,36 @@ describe('FigureForm Uncovered Conditions', () => {
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/success');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/1003');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
+        const nameInput = screen.getByPlaceholderText(/Nendoroid Miku Hatsune/i) as HTMLInputElement;
+        expect(nameInput.value).toBe('Scraped');
+      }, { timeout: 2000 });
     });
 
     it('should cover line 177 condition', async () => {
-      // Test scraping starts loading
+      // Test scraping starts loading by checking spinner
+      let resolveFetch: any;
       (global.fetch as jest.Mock).mockImplementationOnce(
-        () => new Promise(() => {}) // Never resolves
+        () => new Promise(resolve => { resolveFetch = resolve; })
       );
 
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/loading');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/1004');
+      fireEvent.blur(mfcInput);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      });
+        expect(screen.queryByTestId('mfc-scraping-spinner')).toBeInTheDocument();
+      }, { timeout: 1500 });
+
+      // Clean up
+      if (resolveFetch) {
+        resolveFetch({ ok: true, json: async () => ({ success: true, data: {} }) });
+      }
     });
 
     it('should cover line 180 condition', async () => {
@@ -458,11 +487,13 @@ describe('FigureForm Uncovered Conditions', () => {
       renderFigureForm();
       const mfcInput = screen.getByPlaceholderText(/myfigurecollection\.net/i);
 
-      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/complete');
+      await userEvent.type(mfcInput, 'https://myfigurecollection.net/item/1005');
+      fireEvent.blur(mfcInput);
 
+      // Check that spinner is not present after operation completes
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
-      }, { timeout: 3000 });
+        expect(screen.queryByTestId('mfc-scraping-spinner')).not.toBeInTheDocument();
+      }, { timeout: 2000 });
     });
   });
 });

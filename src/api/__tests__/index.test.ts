@@ -1,18 +1,54 @@
+// Mock axios BEFORE importing anything that uses it
+jest.mock('axios', () => {
+  const mockApiInstance = {
+    post: jest.fn(),
+    get: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+    patch: jest.fn(),
+    interceptors: {
+      request: { 
+        use: jest.fn((handler) => {
+          (mockApiInstance as any).requestInterceptor = handler;
+          return 0;
+        })
+      },
+      response: { 
+        use: jest.fn((success, error) => {
+          (mockApiInstance as any).responseSuccessInterceptor = success;
+          (mockApiInstance as any).responseErrorInterceptor = error;
+          return 0;
+        })
+      },
+    },
+    defaults: {
+      headers: {
+        common: {},
+        get: {},
+        post: {},
+        put: {},
+        patch: {},
+        delete: {}
+      }
+    }
+  };
+
+  return {
+    default: mockApiInstance,
+    create: jest.fn(() => mockApiInstance),
+  };
+});
+
+jest.mock('../../stores/authStore');
+
 import { useAuthStore } from '../../stores/authStore';
 import { mockUser, mockFigure, mockPaginatedResponse, mockStatsData } from '../../test-utils';
 import { FigureFormData } from '../../types';
 
-// Mock the auth store
-jest.mock('../../stores/authStore');
+const mockedAxios = jest.requireMock('axios');
+const mockApiInstance = mockedAxios.default || mockedAxios;
 
-// Get the global mock instance from setupTests
-declare const global: {
-  mockApiInstance: any;
-};
-
-const mockApiInstance = global.mockApiInstance;
-
-// Import the API functions
+// Import the API functions after setting up mocks
 import {
   loginUser,
   registerUser,
@@ -67,7 +103,7 @@ describe('API Functions', () => {
         const result = await loginUser('test@example.com', 'password123');
         
         expect(result).toEqual(mockUser);
-        expect(mockApiInstance.post).toHaveBeenCalledWith('/users/login', {
+        expect(mockApiInstance.post).toHaveBeenCalledWith('/auth/login', {
           email: 'test@example.com',
           password: 'password123',
         });
@@ -101,7 +137,7 @@ describe('API Functions', () => {
         const result = await registerUser('testuser', 'test@example.com', 'password123');
         
         expect(result).toEqual(mockUser);
-        expect(mockApiInstance.post).toHaveBeenCalledWith('/users/register', {
+        expect(mockApiInstance.post).toHaveBeenCalledWith('/auth/register', {
           username: 'testuser',
           email: 'test@example.com',
           password: 'password123',

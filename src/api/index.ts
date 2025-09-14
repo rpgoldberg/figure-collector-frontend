@@ -56,12 +56,30 @@ api.interceptors.response.use(
 
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
-  const response = await api.post('/users/login', { email, password });
+  const response = await api.post('/auth/login', { email, password });
   return response.data.data;
 };
 
 export const registerUser = async (username: string, email: string, password: string): Promise<User> => {
-  const response = await api.post('/users/register', { username, email, password });
+  const response = await api.post('/auth/register', { username, email, password });
+  return response.data.data;
+};
+
+export const refreshToken = async (): Promise<{ token: string }> => {
+  const response = await api.post('/auth/refresh');
+  return response.data.data;
+};
+
+export const logoutUser = async (): Promise<void> => {
+  await api.post('/auth/logout');
+};
+
+export const logoutAllSessions = async (): Promise<void> => {
+  await api.post('/auth/logout-all');
+};
+
+export const getUserSessions = async (): Promise<any[]> => {
+  const response = await api.get('/auth/sessions');
   return response.data.data;
 };
 

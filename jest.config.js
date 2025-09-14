@@ -21,7 +21,10 @@ module.exports = {
     '!src/reportWebVitals.ts',
     '!src/setupTests.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
-    '!src/test-utils.tsx'
+    '!src/test-utils.tsx',
+    '!src/test-utils/**', // Exclude all test utilities and mocks
+    '!src/**/*.test.{js,jsx,ts,tsx}',
+    '!src/**/__tests__/**'
   ],
   coverageThreshold: {
     global: {

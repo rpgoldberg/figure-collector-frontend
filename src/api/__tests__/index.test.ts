@@ -17,6 +17,18 @@ const mockedUseAuthStore = useAuthStore as unknown as jest.MockedFunction<typeof
 delete (window as any).location;
 window.location = { href: '' } as any;
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+};
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+});
+
 describe('API Module', () => {
   let mockAxiosInstance: any;
   let requestInterceptor: any;
@@ -25,7 +37,7 @@ describe('API Module', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     window.location.href = '';
-    localStorage.clear();
+    localStorageMock.clear();
 
     // Create mock axios instance
     mockAxiosInstance = {
@@ -131,7 +143,7 @@ describe('API Module', () => {
       await expect(responseInterceptor.errorHandler(error)).rejects.toEqual(error);
 
       expect(logout).toHaveBeenCalled();
-      expect(localStorage.getItem('auth-storage')).toBeNull();
+      expect(localStorage.removeItem).toHaveBeenCalledWith('auth-storage');
       expect(window.location.href).toBe('/login');
     });
   });

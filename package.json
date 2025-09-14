@@ -53,11 +53,6 @@
       "last 1 safari version"
     ]
   },
-  "jest": {
-    "moduleNameMapper": {
-      "@chakra-ui/utils/context": "@chakra-ui/utils/dist/cjs/context.cjs"
-    }
-  },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.28.0",
     "@babel/preset-env": "^7.28.0",

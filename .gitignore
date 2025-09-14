@@ -34,3 +34,5 @@ src/components/__tests__/Layout.simple.test.tsx
 
 # Git helper scripts
 git_command.sh
+test-results.log
+test-results.txt

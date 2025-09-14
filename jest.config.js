@@ -14,7 +14,6 @@ module.exports = {
   ],
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   collectCoverageFrom: [
-    '!**/node_modules/**', // Exclude node_modules
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/index.tsx',
@@ -22,9 +21,10 @@ module.exports = {
     '!src/setupTests.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
     '!src/test-utils.tsx',
-    '!src/test-utils/**', // Exclude all test utilities and mocks
+    '!src/test-utils/**/*', // Exclude all test utilities and mocks
     '!src/**/*.test.{js,jsx,ts,tsx}',
-    '!src/**/__tests__/**'
+    '!src/**/__tests__/**',
+    '!**/node_modules/**'
   ],
   coverageThreshold: {
     global: {

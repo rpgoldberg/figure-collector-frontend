@@ -34,10 +34,8 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'json-summary'],
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '^axios$': '<rootDir>/node_modules/axios/lib/axios.js',
-    '^@chakra-ui/react$': '<rootDir>/node_modules/@chakra-ui/react',
-    '^@chakra-ui/(.*)$': '<rootDir>/node_modules/@chakra-ui/$1',
-    '@chakra-ui/utils/context': '<rootDir>/node_modules/@chakra-ui/utils/dist/context',
+    '^axios$': '<rootDir>/src/test-utils/mocks/axios.js',
+    // Standard module mappings
     '^@emotion/(.*)$': '<rootDir>/node_modules/@emotion/$1',
     '^(api|components|pages|stores|utils)/(.*)$': '<rootDir>/src/$1/$2'
   },
@@ -54,21 +52,16 @@ module.exports = {
     '\\.emotion': 'jest-transform-css'
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!axios|@chakra-ui|@testing-library|framer-motion|@emotion)/'
+    '/node_modules/(?!axios|@chakra-ui|@testing-library|framer-motion|@emotion|react-icons)/'
   ],
   modulePathIgnorePatterns: [
     '<rootDir>/node_modules/@emotion/css/dist/emotion-css.esm.js'
   ],
   modulePaths: ['<rootDir>/src'],
   resolver: '<rootDir>/node_modules/jest-pnp-resolver',
-  fakeTimers: {
-    enableGlobally: true,
-    legacyFakeTimers: false
-  },
-  timers: 'fake',
   maxWorkers: '50%',
-  testTimeout: 15000, // Extended timeout for complex routing tests
-  verbose: true, // More detailed test output
-  resetModules: true, // Reset module registry before each test
+  testTimeout: 20000,
+  verbose: true,
+  resetModules: true,
   snapshotSerializers: ['@emotion/jest/serializer']
 };

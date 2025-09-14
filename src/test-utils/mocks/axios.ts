@@ -38,26 +38,35 @@ const responseMap: { [key: string]: any } = {
   },
 };
 
-export const mockAxios = {
+interface MockAxiosInstance {
+  get: jest.Mock;
+  post: jest.Mock;
+  put: jest.Mock;
+  delete: jest.Mock;
+  create: jest.Mock;
+  default?: MockAxiosInstance;
+}
+
+export const mockAxios: MockAxiosInstance = {
   get: jest.fn((url: string) => {
     const mockData = responseMap[url] || defaultResponse;
     return Promise.resolve(mockData);
   }),
-  
+
   post: jest.fn((url: string, data: any) => {
     const mockData = responseMap[url] || { ...defaultResponse, data: { ...defaultResponse.data, ...data } };
     return Promise.resolve(mockData);
   }),
-  
+
   put: jest.fn((url: string, data: any) => {
     return Promise.resolve({ ...defaultResponse, data: { ...defaultResponse.data, ...data } });
   }),
-  
+
   delete: jest.fn(() => {
     return Promise.resolve(defaultResponse);
   }),
-  
-  create: jest.fn(() => mockAxios),
+
+  create: jest.fn((): MockAxiosInstance => mockAxios),
 };
 
 export const setMockAxiosResponse = (url: string, response: any) => {

@@ -52,7 +52,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilter, initialFilters = {} }) 
 
   useEffect(() => {
     setFilters(initialFilters);
-  }, [initialFilters]);
+  }, [JSON.stringify(initialFilters)]);
 
   return (
     <Box mb={4}>

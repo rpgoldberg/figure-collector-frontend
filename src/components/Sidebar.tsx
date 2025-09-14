@@ -23,6 +23,7 @@ const Sidebar: React.FC = () => {
         bg={active ? 'brand.50' : 'transparent'}
         color={active ? 'brand.600' : 'gray.700'}
         fontWeight={active ? 'medium' : 'normal'}
+        data-active={active}
         _hover={{
           bg: 'brand.50',
           color: 'brand.600',

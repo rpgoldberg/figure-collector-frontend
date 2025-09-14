@@ -26,10 +26,11 @@ const Layout: React.FC = () => {
           }),
         });
         
+        const responseData = await response.json();
         if (response.ok) {
           console.log(`[REGISTER] Frontend v${packageJson.version} registered successfully`);
         } else {
-          console.warn('[REGISTER] Failed to register frontend service');
+          console.warn('[REGISTER] Failed to register frontend service', responseData);
         }
       } catch (error) {
         console.error('[REGISTER] Error registering frontend service:', error);
@@ -41,33 +42,43 @@ const Layout: React.FC = () => {
       // Wait a brief moment for registration to complete
       setTimeout(() => {
         fetch('/version')
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+          })
           .then(data => {
             setVersionInfo(data);
             // Console log for developers
             console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
           })
-          .catch(err => console.error('Failed to fetch version info:', err));
+          .catch(err => {
+            console.error('Failed to fetch version info:', err);
+            setVersionInfo(null);
+          });
       }, 100);
     });
   }, []);
 
   return (
-    <Box minH="100vh" display="flex" flexDirection="column">
-      <Navbar />
+    <Box data-testid="layout" minH="100vh" display="flex" flexDirection="column">
+      <Box data-testid="navbar">
+        <Navbar />
+      </Box>
       <Container maxW="container.xl" pt={5} pb={10} flex="1">
         <Box display="flex" gap={5}>
-          <Box w="250px" display={{ base: 'none', md: 'block' }}>
+          <Box data-testid="sidebar" w="250px" display={{ base: 'none', md: 'block' }}>
             <Sidebar />
           </Box>
-          <Box flex="1">
+          <Box data-testid="outlet" flex="1">
             <Outlet />
           </Box>
         </Box>
       </Container>
       
       {/* Footer with version info */}
-      <Box as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
+      <Box data-testid="footer" role="contentinfo" as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
         <Container maxW="container.xl">
           <Flex justify="space-between" align="center">
             <Text fontSize="sm" color="gray.600">

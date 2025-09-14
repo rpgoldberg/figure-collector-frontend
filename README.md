@@ -36,8 +36,14 @@ npm start
 # Build for production
 npm run build
 
-# Run tests in development
-npm test -- --watch
+# Run tests with coverage (default)
+npm test
+
+# Run tests in watch mode for development
+npm test:watch
+
+# Run tests for CI environment
+npm test:ci
 ```
 
 ### Environment Variables
@@ -111,7 +117,13 @@ Our frontend testing infrastructure continues to evolve with significant enhance
 
 #### Recent Test Improvements
 
-- **Accessibility Testing**: 
+- **Comprehensive Coverage Enhancement** (Latest):
+  - Achieved 80%+ coverage on new/modified code for SonarCloud compliance
+  - Added 45+ new tests covering critical uncovered lines and conditions
+  - Fixed all failing tests in api/index.ts and FigureForm components
+  - Enhanced Layout component tests with version management scenarios
+
+- **Accessibility Testing**:
   - Enhanced jest-axe integration across all components
   - Comprehensive WCAG 2.1 AA compliance checks
   - Improved screen reader compatibility testing
@@ -120,16 +132,19 @@ Our frontend testing infrastructure continues to evolve with significant enhance
   - Fixed test utilities for Layout and FigureList components
   - Improved mocking strategies for more realistic testing
   - Simplified Login component tests with focused input validation
+  - Added comprehensive FigureForm validation and scraping tests
 
 - **API Test Configuration**:
   - Improved Axios mocking configuration
   - Enhanced error scenario testing
   - More robust API interceptor tests
+  - Complete coverage of auth functions (refreshToken, logout, sessions)
 
 - **Test Reliability Enhancements**:
   - Resolved hanging promises in asynchronous tests
   - Improved async/await patterns
   - Better error tracking and state management
+  - Fixed localStorage and window.location mocking issues
 
 #### Key Testing Focus Areas
 
@@ -148,6 +163,14 @@ Our frontend testing infrastructure continues to evolve with significant enhance
    - Optimized test execution time
    - Improved test isolation techniques
 
+#### Test Coverage Files
+
+Key test files providing comprehensive coverage:
+- `src/api/__tests__/index.test.ts` - API interceptors and auth functions
+- `src/components/__tests__/Layout.test.tsx` - Version management and UI
+- `src/components/__tests__/FigureForm.*.test.tsx` - Form validation, scraping, conditions
+- `src/test-utils.tsx` - Shared testing utilities and providers
+
 #### Recommended Testing Workflow
 
 ```bash
@@ -159,6 +182,12 @@ npm test ComponentName.test.tsx
 
 # Generate test coverage report
 npm test -- --coverage
+
+# Run tests without coverage (faster)
+npm test -- --no-coverage
+
+# Run specific test suite
+npm test -- src/api/__tests__/index.test.ts
 ```
 
 **Note**: Our continuous testing approach ensures high-quality, reliable, and accessible frontend components across all user interaction scenarios.

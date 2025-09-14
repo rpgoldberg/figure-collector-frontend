@@ -22,8 +22,6 @@ import { useForm } from 'react-hook-form';
 import { FaLink, FaQuestionCircle, FaImage } from 'react-icons/fa';
 import { Figure, FigureFormData } from '../types';
 
-// Test environment detection for stable execution
-const isTestEnvironment = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
 interface FigureFormProps {
   initialData?: Figure;
@@ -60,10 +58,11 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
 
   // Optimized refs for stable references and operation management
   const previousMfcLink = useRef<string>('');
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentScrapeController = useRef<AbortController | null>(null);
   const isScrapingRef = useRef(false);
   const lastScrapePromise = useRef<Promise<void> | null>(null);
+  const mountedRef = useRef(true);
 
   // Debug: Log every render to see what's happening (commented out to reduce noise)
   // console.log('[FRONTEND DEBUG] Component render, mfcLink:', mfcLink);
@@ -81,12 +80,31 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   };
 
   const validateUrl = (value: string | undefined) => {
+    console.log('Validating URL:', value);
     if (!value) return true;
     
     try {
-      new URL(value);
+      const url = new URL(value);
+      console.log('URL Details:', {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        pathname: url.pathname,
+        search: url.search
+      });
+      // More rigorous checks
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        console.log('Invalid protocol');
+        return 'URL must use http or https';
+      }
+      // Ensure the URL has a domain with at least two parts
+      const hostParts = url.hostname.split('.');
+      if (hostParts.length < 2 || hostParts.some(part => part.length === 0)) {
+        console.log('Invalid domain');
+        return 'Please enter a valid URL with a domain';
+      }
       return true;
     } catch (e) {
+      console.log('URL validation error:', e);
       return 'Please enter a valid URL';
     }
   };
@@ -98,10 +116,10 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
     const urlValidation = validateUrl(value);
     if (urlValidation !== true) return urlValidation;
 
-    // Then check MFC URL format: https://myfigurecollection.net/item/[number][/]
-    const mfcPattern = /^https:\/\/myfigurecollection\.net\/item\/\d+\/?$/;
+    // Accept http/https and optional trailing slash or minor path/query fragments after the numeric id
+    const mfcPattern = /^https?:\/\/(?:www\.)?myfigurecollection\.net\/item\/\d+(?:\/.*)?$/i;
     if (!mfcPattern.test(value)) {
-      return 'Please enter a valid MFC URL: https://myfigurecollection.net/item/[number]';
+      return 'Please enter a valid MFC URL like https://myfigurecollection.net/item/123456';
     }
 
     return true;
@@ -140,6 +158,10 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
       if (!isNaN(num) && num > 0 && num <= 1) {
         return `1/${Math.round(1 / num)}`;
       }
+      // Preserve non-numeric inputs like 'Nendoroid'
+      if (isNaN(num)) {
+        return input;
+      }
     }
     return input;
   };
@@ -152,42 +174,24 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   // Optimized function to scrape MFC data with proper async queuing and cleanup
   const handleMFCLinkBlur = useCallback(async (targetMfcLink?: string) => {
     const currentMfcLink = targetMfcLink || getValues('mfcLink');
+    if (!currentMfcLink?.trim()) return;
 
-    console.log('[FRONTEND] MFC link blur triggered with:', currentMfcLink);
+    const mfcPattern = /^https?:\/\/(?:www\.)?myfigurecollection\.net\/item\/\d+(?:\/.*)?$/i;
+    if (!mfcPattern.test(currentMfcLink)) return;
 
-    if (!currentMfcLink || !currentMfcLink.trim()) {
-      console.log('[FRONTEND] No MFC link provided, skipping scrape');
-      return;
-    }
-
-    // Check if it's a valid MFC URL format
-    const mfcPattern = /^https:\/\/myfigurecollection\.net\/item\/\d+\/?$/;
-    if (!mfcPattern.test(currentMfcLink)) {
-      console.log('[FRONTEND] Not a valid MFC item URL, skipping scrape');
-      return;
-    }
-
-    // Cancel any existing scrape operation
     if (currentScrapeController.current) {
-      console.log('[FRONTEND] Cancelling previous scrape operation');
       currentScrapeController.current.abort();
     }
 
-    // If already scraping, wait for it to complete or cancel
     if (isScrapingRef.current && lastScrapePromise.current) {
-      try {
-        await lastScrapePromise.current;
-      } catch (error) {
-        // Previous operation was cancelled or failed, continue
-      }
+      try { await lastScrapePromise.current; } catch {}
     }
 
-    console.log('[FRONTEND] Starting MFC scraping process...');
     setIsScrapingMFC(true);
     isScrapingRef.current = true;
 
-    // Create new abort controller for this operation
-    currentScrapeController.current = new AbortController();
+    const controller = new AbortController();
+    currentScrapeController.current = controller;
 
     const scrapePromise = (async () => {
       try {
@@ -196,110 +200,60 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
 
         const response = await fetch('/api/figures/scrape-mfc', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody),
-          signal: currentScrapeController.current?.signal
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mfcLink: currentMfcLink }),
+          signal: controller.signal
         });
 
-        // Check if operation was cancelled
-        if (currentScrapeController.current?.signal.aborted) {
-          console.log('[FRONTEND] Scrape operation was cancelled');
-          return;
-        }
-
-        console.log('[FRONTEND] Response status:', response.status);
-        console.log('[FRONTEND] Response headers:', Object.fromEntries(response.headers.entries()));
-
+        if (controller.signal.aborted) return;
         const result = await response.json();
-        console.log('[FRONTEND] Response data:', result);
-
+        
         if (!response.ok) {
-          console.error('[FRONTEND] Response not ok:', response.status, result);
-          toast({
-            title: 'Error',
-            description: result.message || 'Failed to scrape MFC data',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
+          if (mountedRef.current) {
+            toast({
+              title: 'Error',
+              description: result.message || 'Failed to scrape MFC data',
+              status: 'error',
+              duration: 5000,
+              isClosable: true,
+            });
+          }
           return;
         }
 
         if (result.success && result.data) {
-          const scrapedData = result.data;
-          console.log('[FRONTEND] Processing scraped data:', scrapedData);
-
-          // Check if we got a manual extraction indicator
-          if (scrapedData.imageUrl && scrapedData.imageUrl.startsWith('MANUAL_EXTRACT:')) {
-            console.log('[FRONTEND] Manual extraction required');
-            toast({
-              title: 'Auto-scraping blocked',
-              description: 'MFC has anti-bot protection. Click the link icon to open the page and manually copy the data.',
-              status: 'warning',
-              duration: 8000,
-              isClosable: true,
-            });
-            return;
-          }
-
           let fieldsPopulated = 0;
-
-          // Only populate empty fields - use getValues to avoid stale closure
           const currentValues = getValues();
-          if (!currentValues.imageUrl && scrapedData.imageUrl) {
-            setValue('imageUrl', scrapedData.imageUrl, { shouldValidate: true, shouldDirty: true });
+          
+          if (!currentValues.imageUrl && result.data.imageUrl) {
+            setValue('imageUrl', result.data.imageUrl, { shouldValidate: true, shouldDirty: true });
             fieldsPopulated++;
-            console.log('[FRONTEND] Set imageUrl:', scrapedData.imageUrl);
           }
-          if (!currentValues.manufacturer && scrapedData.manufacturer) {
-            setValue('manufacturer', scrapedData.manufacturer, { shouldValidate: true, shouldDirty: true });
+          if (!currentValues.manufacturer && result.data.manufacturer) {
+            setValue('manufacturer', result.data.manufacturer, { shouldValidate: true, shouldDirty: true });
             fieldsPopulated++;
-            console.log('[FRONTEND] Set manufacturer:', scrapedData.manufacturer);
           }
-          if (!currentValues.name && scrapedData.name) {
-            setValue('name', scrapedData.name, { shouldValidate: true, shouldDirty: true });
+          if (!currentValues.name && result.data.name) {
+            setValue('name', result.data.name, { shouldValidate: true, shouldDirty: true });
             fieldsPopulated++;
-            console.log('[FRONTEND] Set name:', scrapedData.name);
           }
-          if (!currentValues.scale && scrapedData.scale) {
-            setValue('scale', scrapedData.scale, { shouldValidate: true, shouldDirty: true });
+          if (!currentValues.scale && result.data.scale) {
+            setValue('scale', result.data.scale, { shouldValidate: true, shouldDirty: true });
             fieldsPopulated++;
-            console.log('[FRONTEND] Set scale:', scrapedData.scale);
           }
 
-          // Force re-render to ensure form fields are updated in test environment
-          if (fieldsPopulated > 0 && isTestEnvironment) {
-            setTimeout(() => {
-              // Trigger a microtask to ensure React has time to update
-              Promise.resolve().then(() => {
-                console.log('[FRONTEND] Forced re-render after populating fields');
-              });
-            }, 0);
-          }
-
-          console.log(`[FRONTEND] Populated ${fieldsPopulated} fields from MFC data`);
-
-          if (fieldsPopulated > 0) {
+          if (mountedRef.current) {
             toast({
-              title: 'Success',
-              description: `Auto-populated ${fieldsPopulated} fields from MFC!`,
-              status: 'success',
-              duration: 3000,
-              isClosable: true,
-            });
-          } else {
-            toast({
-              title: 'Info',
-              description: 'No new data found to populate (fields may already be filled)',
-              status: 'info',
+              title: fieldsPopulated > 0 ? 'Success' : 'Info',
+              description: fieldsPopulated > 0
+                ? `Auto-populated ${fieldsPopulated} fields from MFC!`
+                : 'No new data found to populate (fields may already be filled)',
+              status: fieldsPopulated > 0 ? 'success' : 'info',
               duration: 3000,
               isClosable: true,
             });
           }
-        } else {
-          console.log('[FRONTEND] No valid data in response:', result);
+        } else if (mountedRef.current) {
           toast({
             title: 'Warning',
             description: 'No data could be extracted from MFC link',
@@ -308,24 +262,25 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
             isClosable: true,
           });
         }
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.log('[FRONTEND] Scrape operation was aborted');
-          return;
+      } catch (error: any) {
+        if (error?.name === 'AbortError') return;
+        if (mountedRef.current) {
+          toast({
+            title: 'Error',
+            description: 'Network error while contacting server',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
         }
-        console.error('[FRONTEND] Error scraping MFC data:', error);
-        toast({
-          title: 'Error',
-          description: 'Network error while contacting server',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
       } finally {
-        console.log('[FRONTEND] MFC scraping process completed');
-        setIsScrapingMFC(false);
+        if (mountedRef.current) {
+          setIsScrapingMFC(false);
+        }
         isScrapingRef.current = false;
-        currentScrapeController.current = null;
+        if (currentScrapeController.current === controller) {
+          currentScrapeController.current = null;
+        }
       }
     })();
 
@@ -335,29 +290,23 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
 
   // Optimized useEffect for MFC link changes with stable dependencies
   useEffect(() => {
-    console.log('[DEBUG] useEffect for mfcLink triggered');
     const currentMfcLink = mfcLink || '';
 
     // Skip if no actual change
     if (currentMfcLink === previousMfcLink.current) {
-      console.log('[DEBUG] No change in MFC link, skipping');
       return;
     }
 
-    console.log('[DEBUG] MFC link changed, current link:', currentMfcLink);
-    console.log('[DEBUG] Previous link:', previousMfcLink.current);
 
     // Clear any existing debounce timer
     if (debounceTimer.current) {
-      console.log('[DEBUG] Clearing existing debounce timer');
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
 
     // Only trigger if the link is valid and non-empty
-    const mfcPattern = /^https:\/\/myfigurecollection\.net\/item\/\d+\/?$/;
+    const mfcPattern = /^https?:\/\/(?:www\.)?myfigurecollection\.net\/item\/\d+(?:\/.*)?$/i;
     if (typeof currentMfcLink === 'string' && currentMfcLink.trim() && mfcPattern.test(currentMfcLink)) {
-      console.log('[DEBUG] Valid MFC link, setting debounce timer');
 
       // Use optimized debounce with stable timer management
       debounceTimer.current = setTimeout(async () => {
@@ -374,23 +323,19 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
           console.log('[DEBUG] Link changed during debounce, skipping scrape');
         }
         debounceTimer.current = null;
-      }, isTestEnvironment ? 1 : 1000); // Even faster debounce in test environment (1ms)
-    } else {
-      console.log('[DEBUG] Invalid or empty MFC link, not setting timer');
+      }, 1000);
     }
 
     previousMfcLink.current = currentMfcLink;
 
     // Cleanup function
     return () => {
-      console.log('[DEBUG] useEffect cleanup');
       if (debounceTimer.current) {
-        console.log('[DEBUG] Clearing debounce timer in cleanup');
         clearTimeout(debounceTimer.current);
         debounceTimer.current = null;
       }
     };
-  }, [mfcLink]); // Minimal dependencies - only watch mfcLink
+  }, [mfcLink, handleMFCLinkBlur, getValues]); // Include dependencies for stable behavior
 
   // Reset image error when imageUrl changes
   useEffect(() => {
@@ -416,7 +361,9 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
 
   // Cleanup effect for component unmount and pending operations
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       // Cancel any pending scrape operations
       if (currentScrapeController.current) {
         currentScrapeController.current.abort();
@@ -438,14 +385,14 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
   return (
     <Box as="form" onSubmit={handleSubmit((data) => onSubmit(data))} role="form" aria-labelledby="figure-form-title">
       <VStack spacing={6} align="stretch">
-        <Text id="figure-form-title" fontSize="xl" fontWeight="bold" srOnly>
+        <Text id="figure-form-title" fontSize="xl" fontWeight="bold" className="sr-only">
           {initialData ? 'Edit Figure Form' : 'Add Figure Form'}
         </Text>
         <Text fontSize="sm" color="gray.600" mb={4} aria-describedby="form-instructions">
           Fill out the form below to {initialData ? 'update' : 'add'} a figure to your collection.
           {mfcLink ? ' The form will auto-populate data from the MFC link.' : ''}
         </Text>
-        <Text id="form-instructions" srOnly>
+        <Text id="form-instructions" className="sr-only">
           Required fields are marked with an asterisk. You can provide an MFC link to auto-populate figure data.
         </Text>
         {/* MFC Link at top - full width */}
@@ -457,6 +404,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 validate: validateMfcUrl
               })}
               placeholder="https://myfigurecollection.net/item/123456"
+              data-invalid={!!errors.mfcLink}
             />
             <InputRightElement>
        {isScrapingMFC ? (
@@ -473,7 +421,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
 	      )}
             </InputRightElement>
           </InputGroup>
-          <FormErrorMessage>{errors.mfcLink?.message}</FormErrorMessage>
+          <FormErrorMessage data-testid="form-error-message">{errors.mfcLink?.message}</FormErrorMessage>
           <Text fontSize="xs" color="gray.500" mt={1}>
             Click the link icon to open MFC page, then manually copy data if auto-population fails
           </Text>
@@ -491,7 +439,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 placeholder="e.g., Good Smile Company"
                 aria-describedby={errors.manufacturer ? "manufacturer-error" : undefined}
               />
-              <FormErrorMessage id="manufacturer-error">{errors.manufacturer?.message}</FormErrorMessage>
+              <FormErrorMessage id="manufacturer-error" data-testid="form-error-message">{errors.manufacturer?.message}</FormErrorMessage>
             </FormControl>
           </GridItem>
 
@@ -506,7 +454,7 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 placeholder="e.g., Nendoroid Miku Hatsune"
                 aria-describedby={errors.name ? "name-error" : undefined}
               />
-              <FormErrorMessage id="name-error">{errors.name?.message}</FormErrorMessage>
+              <FormErrorMessage id="name-error" data-testid="form-error-message">{errors.name?.message}</FormErrorMessage>
             </FormControl>
           </GridItem>
 

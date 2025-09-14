@@ -70,10 +70,19 @@ const Navbar: React.FC = () => {
           <IconButton
             onClick={onToggle}
             icon={
-              isOpen ? <CloseIcon w={3} h={3} /> : <HamburgerIcon w={5} h={5} />
+              isOpen ? (
+                <Box data-testid="close-icon">
+                  <CloseIcon w={3} h={3} />
+                </Box>
+              ) : (
+                <Box data-testid="hamburger-icon">
+                  <HamburgerIcon w={5} h={5} />
+                </Box>
+              )
             }
             variant={'ghost'}
             aria-label={'Toggle Navigation'}
+            data-testid="mobile-nav-toggle"
           />
         </Flex>
         <Flex flex={{ base: 1 }} justify={{ base: 'center', md: 'start' }}>
@@ -110,6 +119,8 @@ const Navbar: React.FC = () => {
                 variant={'link'}
                 cursor={'pointer'}
                 minW={0}
+                data-testid="user-avatar-button"
+                aria-label="User Menu"
               >
                 <Avatar
                   size={'sm'}
@@ -216,11 +227,11 @@ const DesktopSubNav = ({ label, href, subLabel }: NavItem) => {
     <Link
       as={RouterLink}
       to={href ?? '#'}
-      role={'group'}
       display={'block'}
       p={2}
       rounded={'md'}
       _hover={{ bg: useColorModeValue('brand.50', 'gray.900') }}
+      aria-label={`Navigate to ${label}${subLabel ? ': ' + subLabel : ''}`}
     >
       <Stack direction={'row'} align={'center'}>
         <Box>

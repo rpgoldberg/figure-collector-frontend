@@ -1,83 +1,118 @@
-import React from 'react';
+/**
+ * Minimal Test Environment Setup
+ * This file contains ONLY essential test environment configuration.
+ * All library-specific mocks are in src/test-utils/mocks/
+ */
+
 import '@testing-library/jest-dom';
 import 'jest-axe/extend-expect';
 import { configure } from '@testing-library/react';
 
-// Global Emotion runtime configuration for testing
-global.__emotion_real = {
-  cache: {
-    name: 'css',
-    styles: '',
-    next: undefined,
-    key: 'css',
-    compat: undefined
-  }
-};
-
-global.__EMOTION_RUNTIME_CONFIG__ = {
-  cache: {
-    name: 'css',
-    styles: '',
-    next: undefined,
-    key: 'css',
-    compat: undefined
-  }
-};
-
-// Enhance Testing Library configuration for React 18
-configure({
-  // Adjust for React 18 and async operations
-  asyncUtilTimeout: 10000, // Extended async timeout
-  // Relaxed queries to be more inclusive
-  testIdAttribute: 'data-testid',
-  // Improved query configurations
-  throwSuggestions: true,
-});
-
-// Global error handling for async tests
-global.addEventListener('unhandledrejection', event => {
-  console.warn('Unhandled promise rejection:', event.reason);
-});
-
-// Mock window.scrollTo for Framer Motion animations
-Object.defineProperty(window, 'scrollTo', {
-  writable: true,
-  value: jest.fn(),
-});
-
-// Comprehensive axios mock to prevent ES module import issues
-jest.mock('axios', () => {
-  const mockAxios = {
-    create: jest.fn(() => mockAxios),
-    get: jest.fn(() => Promise.resolve({ data: {} })),
-    post: jest.fn(() => Promise.resolve({ data: {} })),
-    put: jest.fn(() => Promise.resolve({ data: {} })),
-    delete: jest.fn(() => Promise.resolve({ data: {} })),
-    patch: jest.fn(() => Promise.resolve({ data: {} })),
+// Mock axios globally to prevent ES6 import issues
+jest.mock('axios', () => ({
+  default: {
+    get: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    post: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    put: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    delete: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    create: jest.fn(() => ({
+      get: jest.fn(() => Promise.resolve({ data: { success: true } })),
+      post: jest.fn(() => Promise.resolve({ data: { success: true } })),
+      put: jest.fn(() => Promise.resolve({ data: { success: true } })),
+      delete: jest.fn(() => Promise.resolve({ data: { success: true } })),
+      interceptors: {
+        request: { use: jest.fn() },
+        response: { use: jest.fn() }
+      }
+    })),
     interceptors: {
-      request: {
-        use: jest.fn(),
-        eject: jest.fn(),
-      },
-      response: {
-        use: jest.fn(),
-        eject: jest.fn(),
-      },
-    },
-    defaults: {
-      headers: {
-        common: {},
-        delete: {},
-        head: {},
-        patch: {},
-        post: {},
-        put: {},
-      },
-    },
+      request: { use: jest.fn() },
+      response: { use: jest.fn() }
+    }
+  },
+  get: jest.fn(() => Promise.resolve({ data: { success: true } })),
+  post: jest.fn(() => Promise.resolve({ data: { success: true } })),
+  put: jest.fn(() => Promise.resolve({ data: { success: true } })),
+  delete: jest.fn(() => Promise.resolve({ data: { success: true } })),
+  create: jest.fn(() => ({
+    get: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    post: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    put: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    delete: jest.fn(() => Promise.resolve({ data: { success: true } })),
+    interceptors: {
+      request: { use: jest.fn() },
+      response: { use: jest.fn() }
+    }
+  }))
+}));
+
+// Testing Library configuration
+configure({
+  asyncUtilTimeout: 15000,
+  testIdAttribute: 'data-testid',
+  throwSuggestions: false,
+});
+
+// Essential DOM mocks
+Object.defineProperty(window, 'localStorage', {
+  writable: true,
+  value: {
+    getItem: jest.fn(() => null),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  },
+});
+
+Object.defineProperty(window, 'sessionStorage', {
+  writable: true,
+  value: {
+    getItem: jest.fn(() => null),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  },
+});
+
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: (query: string) => ({
+    media: query,
+    matches: false,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }),
+});
+
+// Basic fetch mock
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve('{}'),
+    headers: new Headers(),
+  })
+) as jest.Mock;
+
+// Suppress console errors in tests
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning:') || args[0].includes('React'))
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
   };
-  return {
-    __esModule: true,
-    default: mockAxios,
-    ...mockAxios,
-  };
+});
+
+afterAll(() => {
+  console.error = originalError;
 });

@@ -1,31 +1,33 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
-import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { CacheProvider } from '@emotion/react';
-// Removed createEmotionServer import
 import createCache from '@emotion/cache';
 
-const queryClient = new QueryClient({
+// Mock QueryClient and Provider for testing
+import { QueryClient, QueryClientProvider } from 'react-query';
+
+const createTestQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
-      // Disable retries for testing
       retry: false,
-      // Minimal caching for testing
-      cacheTime: 1000,
-      // Shorter stale time to simulate real-world loading
-      staleTime: 0,
-      // Longer timeout for async queries
-      suspense: false,
-      // Immediate refetching to simulate real-world behavior
-      refetchOnWindowFocus: false,
-      // Quick initial fetch
-      refetchInterval: 0,
+      cacheTime: Infinity,
+    },
+    mutations: {
+      retry: false,
     },
   },
 });
+
+const MockQueryClientProvider = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = createTestQueryClient();
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+};
 
 const AllProviders = ({ children, initialRoutes = ['/'] }: { 
   children: React.ReactNode, 
@@ -50,13 +52,13 @@ const AllProviders = ({ children, initialRoutes = ['/'] }: {
 
   return (
     <CacheProvider value={emotionCache}>
-      <QueryClientProvider client={queryClient}>
+      <MockQueryClientProvider>
         <ChakraProvider theme={testTheme}>
           <MemoryRouter initialEntries={initialRoutes}>
             {children}
           </MemoryRouter>
         </ChakraProvider>
-      </QueryClientProvider>
+      </MockQueryClientProvider>
     </CacheProvider>
   );
 };
@@ -66,15 +68,22 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'> & { 
     initialRoutes?: string[] 
   }
-) => render(ui, { 
-  wrapper: (props) => (
-    <AllProviders 
-      initialRoutes={options?.initialRoutes} 
-      {...props} 
-    />
-  ), 
-  ...options 
-});
+) => {
+  const { initialRoutes, ...renderOptions } = options || {};
+  
+  // Create wrapper element with providers
+  const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <AllProviders initialRoutes={initialRoutes}>
+      {children}
+    </AllProviders>
+  );
+  
+  // Standard render with wrapper - same as EmptyState
+  return render(ui, { 
+    wrapper: TestWrapper,
+    ...renderOptions 
+  });
+};
 
 // Enhanced async utilities for React 18 testing
 const renderAsync = async (
@@ -190,7 +199,10 @@ export const mockPaginatedResponse = {
   ]
 };
 
+// Export everything from testing library and new utilities
 export * from '@testing-library/react';
-export { customRender as render, renderAsync, renderWithErrorBoundary, TestErrorBoundary };
-export { screen, waitFor, fireEvent, act } from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';
+export { customRender as render, renderAsync, renderWithErrorBoundary, TestErrorBoundary };
+
+// Export new mock utilities for easy access
+export * from './test-utils/mocks';

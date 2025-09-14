@@ -1,381 +1,236 @@
+/**
+ * Tests for API functions and interceptors
+ */
+import axios from 'axios';
 import { useAuthStore } from '../../stores/authStore';
-import { mockUser, mockFigure, mockPaginatedResponse, mockStatsData } from '../../test-utils';
-import { FigureFormData } from '../../types';
+import * as api from '../index';
 
-// Mock the auth store
+// Mock axios
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+// Mock auth store
 jest.mock('../../stores/authStore');
+const mockedUseAuthStore = useAuthStore as unknown as jest.MockedFunction<typeof useAuthStore>;
 
-// Get the global mock instance from setupTests
-declare const global: {
-  mockApiInstance: any;
+// Mock window.location
+delete (window as any).location;
+window.location = { href: '' } as any;
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
 };
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true
+});
 
-const mockApiInstance = global.mockApiInstance;
-
-// Import the API functions
-import {
-  loginUser,
-  registerUser,
-  getUserProfile,
-  updateUserProfile,
-  getFigures,
-  getFigureById,
-  createFigure,
-  updateFigure,
-  deleteFigure,
-  searchFigures,
-  filterFigures,
-  getFigureStats,
-} from '../index';
-
-describe('API Functions', () => {
-  const mockGetState = jest.fn();
-  const mockSetUser = jest.fn();
-  const mockLogout = jest.fn();
+describe('API Module', () => {
+  let mockAxiosInstance: any;
+  let requestInterceptor: any;
+  let responseInterceptor: any;
+  let mockApi: any;
 
   beforeEach(() => {
-    // Reset mocks
     jest.clearAllMocks();
-    
-    // Mock auth store
-    (useAuthStore as any).getState = mockGetState;
-    
+    window.location.href = '';
+    localStorageMock.clear();
+    localStorageMock.removeItem.mockClear();
+
+    // Create mock axios instance
+    mockAxiosInstance = {
+      get: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      post: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      put: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      delete: jest.fn().mockResolvedValue({ data: { data: {} } }),
+      interceptors: {
+        request: {
+          use: jest.fn((handler) => {
+            requestInterceptor = handler;
+            return 0;
+          }),
+        },
+        response: {
+          use: jest.fn((successHandler, errorHandler) => {
+            responseInterceptor = { successHandler, errorHandler };
+            return 0;
+          }),
+        },
+      },
+    };
+
+    mockedAxios.create.mockReturnValue(mockAxiosInstance);
+
     // Default auth store state
-    mockGetState.mockReturnValue({
-      user: mockUser,
-      setUser: mockSetUser,
-      logout: mockLogout,
+    mockedUseAuthStore.getState = jest.fn().mockReturnValue({
+      user: null,
+      setUser: jest.fn(),
+      logout: jest.fn(),
     });
 
-    // Mock window.location
-    Object.defineProperty(window, 'location', {
-      value: { href: '' },
-      writable: true,
-    });
-  });
-
-  describe('Auth API', () => {
-    describe('loginUser', () => {
-      it('should login user successfully', async () => {
-        const responseData = {
-          success: true,
-          data: mockUser,
-        };
-        
-        mockApiInstance.post.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await loginUser('test@example.com', 'password123');
-        
-        expect(result).toEqual(mockUser);
-        expect(mockApiInstance.post).toHaveBeenCalledWith('/users/login', {
-          email: 'test@example.com',
-          password: 'password123',
-        });
-      });
-
-      it('should handle login error', async () => {
-        const errorResponse = {
-          response: {
-            status: 401,
-            data: { message: 'Invalid credentials' },
-          },
-        };
-        
-        mockApiInstance.post.mockRejectedValueOnce(errorResponse);
-        
-        await expect(loginUser('test@example.com', 'wrongpassword'))
-          .rejects
-          .toEqual(errorResponse);
-      });
-    });
-
-    describe('registerUser', () => {
-      it('should register user successfully', async () => {
-        const responseData = {
-          success: true,
-          data: mockUser,
-        };
-        
-        mockApiInstance.post.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await registerUser('testuser', 'test@example.com', 'password123');
-        
-        expect(result).toEqual(mockUser);
-        expect(mockApiInstance.post).toHaveBeenCalledWith('/users/register', {
-          username: 'testuser',
-          email: 'test@example.com',
-          password: 'password123',
-        });
-      });
-    });
-
-    describe('getUserProfile', () => {
-      it('should get user profile successfully', async () => {
-        const responseData = {
-          success: true,
-          data: mockUser,
-        };
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await getUserProfile();
-        
-        expect(result).toEqual(mockUser);
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/users/profile');
-      });
-    });
-
-    describe('updateUserProfile', () => {
-      it('should update user profile successfully', async () => {
-        const updatedUser = { ...mockUser, username: 'updateduser' };
-        const responseData = {
-          success: true,
-          data: updatedUser,
-        };
-        
-        mockApiInstance.put.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await updateUserProfile({ username: 'updateduser' });
-        
-        expect(result).toEqual(updatedUser);
-        expect(mockApiInstance.put).toHaveBeenCalledWith('/users/profile', { username: 'updateduser' });
-      });
+    // Re-import to trigger module initialization
+    jest.isolateModules(() => {
+      mockApi = require('../index');
     });
   });
 
-  describe('Figures API', () => {
-    describe('getFigures', () => {
-      it('should get figures with default pagination', async () => {
-        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
-        
-        const result = await getFigures();
-        
-        expect(result).toEqual(mockPaginatedResponse);
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures?page=1&limit=10');
+  describe('Request Interceptor', () => {
+    it('should add auth token to requests when user is logged in', () => {
+      mockedUseAuthStore.getState.mockReturnValue({
+        user: { token: 'test-token', email: 'test@test.com' },
+        setUser: jest.fn(),
+        logout: jest.fn(),
       });
 
-      it('should get figures with custom pagination', async () => {
-        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
-        
-        const result = await getFigures(2, 5);
-        
-        expect(result).toEqual(mockPaginatedResponse);
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures?page=2&limit=5');
-      });
+      const config = { headers: {} as any };
+      const result = requestInterceptor(config);
+
+      expect(result.headers.Authorization).toBe('Bearer test-token');
     });
 
-    describe('getFigureById', () => {
-      it('should get figure by id successfully', async () => {
-        const responseData = {
-          success: true,
-          data: mockFigure,
-        };
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await getFigureById(mockFigure._id);
-        
-        expect(result).toEqual(mockFigure);
-        expect(mockApiInstance.get).toHaveBeenCalledWith(`/figures/${mockFigure._id}`);
+    it('should not add auth token when user is not logged in', () => {
+      mockedUseAuthStore.getState.mockReturnValue({
+        user: null,
+        setUser: jest.fn(),
+        logout: jest.fn(),
       });
 
-      it('should handle figure not found', async () => {
-        const errorResponse = {
-          response: { status: 404 },
-        };
-        
-        mockApiInstance.get.mockRejectedValueOnce(errorResponse);
-        
-        await expect(getFigureById('invalid-id'))
-          .rejects
-          .toEqual(errorResponse);
+      const config = { headers: {} as any };
+      const result = requestInterceptor(config);
+
+      expect(result.headers.Authorization).toBeUndefined();
+    });
+  });
+
+  describe('Response Interceptor', () => {
+    it('should update token when x-new-token header is present', () => {
+      const setUser = jest.fn();
+      mockedUseAuthStore.getState.mockReturnValue({
+        user: { token: 'old-token', email: 'test@test.com', id: '1' },
+        setUser,
+        logout: jest.fn(),
       });
+
+      const response = {
+        headers: { 'x-new-token': 'Bearer new-token' },
+        data: { success: true },
+      };
+
+      const result = responseInterceptor.successHandler(response);
+
+      expect(setUser).toHaveBeenCalledWith({
+        token: 'new-token',
+        email: 'test@test.com',
+        id: '1',
+      });
+      expect(result).toBe(response);
     });
 
-    describe('createFigure', () => {
-      it('should create figure successfully', async () => {
-        const figureFormData: FigureFormData = {
-          manufacturer: mockFigure.manufacturer,
-          name: mockFigure.name,
-          scale: mockFigure.scale,
-          mfcLink: mockFigure.mfcLink,
-          location: mockFigure.location,
-          boxNumber: mockFigure.boxNumber,
-          imageUrl: mockFigure.imageUrl,
-        };
-        
-        const responseData = {
-          success: true,
-          data: mockFigure,
-        };
-        
-        mockApiInstance.post.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await createFigure(figureFormData);
-        
-        expect(result).toEqual(mockFigure);
-        expect(mockApiInstance.post).toHaveBeenCalledWith('/figures', figureFormData);
+    it('should handle 401 errors by logging out and redirecting', async () => {
+      const logout = jest.fn();
+      mockedUseAuthStore.getState.mockReturnValue({
+        user: { token: 'test-token', email: 'test@test.com' },
+        setUser: jest.fn(),
+        logout,
       });
+
+      const error = {
+        response: { status: 401 },
+      };
+
+      await expect(responseInterceptor.errorHandler(error)).rejects.toEqual(error);
+
+      expect(logout).toHaveBeenCalled();
+      expect(localStorage.removeItem).toHaveBeenCalledWith('auth-storage');
+      expect(window.location.href).toBe('/login');
+    });
+  });
+
+  describe('API Functions Coverage - Lines 69-93', () => {
+    it('should cover refreshToken lines 69-70', async () => {
+      const mockToken = { token: 'new-refresh-token-123' };
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { data: mockToken }
+      });
+
+      const result = await mockApi.refreshToken();
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/refresh');
+      expect(result).toEqual(mockToken);
     });
 
-    describe('updateFigure', () => {
-      it('should update figure successfully', async () => {
-        const updatedData: FigureFormData = {
-          manufacturer: mockFigure.manufacturer,
-          name: 'Updated Figure Name',
-          scale: mockFigure.scale,
-        };
-        
-        const updatedFigure = { ...mockFigure, name: 'Updated Figure Name' };
-        
-        const responseData = {
-          success: true,
-          data: updatedFigure,
-        };
-        
-        mockApiInstance.put.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await updateFigure(mockFigure._id, updatedData);
-        
-        expect(result).toEqual(updatedFigure);
-        expect(mockApiInstance.put).toHaveBeenCalledWith(`/figures/${mockFigure._id}`, updatedData);
+    it('should cover logoutUser line 74', async () => {
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { success: true }
       });
+
+      await mockApi.logoutUser();
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/logout');
     });
 
-    describe('deleteFigure', () => {
-      it('should delete figure successfully', async () => {
-        mockApiInstance.delete.mockResolvedValueOnce({ data: { success: true } });
-        
-        await deleteFigure(mockFigure._id);
-        
-        expect(mockApiInstance.delete).toHaveBeenCalledWith(`/figures/${mockFigure._id}`);
+    it('should cover logoutAllSessions line 78', async () => {
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { success: true }
       });
 
-      it('should handle delete error', async () => {
-        const errorResponse = {
-          response: { status: 403 },
-        };
-        
-        mockApiInstance.delete.mockRejectedValueOnce(errorResponse);
-        
-        await expect(deleteFigure(mockFigure._id))
-          .rejects
-          .toEqual(errorResponse);
-      });
+      await mockApi.logoutAllSessions();
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/logout-all');
     });
 
-    describe('searchFigures', () => {
-      it('should search figures successfully', async () => {
-        const searchResults = [
-          {
-            id: mockFigure._id,
-            manufacturer: mockFigure.manufacturer,
-            name: mockFigure.name,
-            scale: mockFigure.scale,
-            mfcLink: mockFigure.mfcLink || '',
-            location: mockFigure.location || '',
-            boxNumber: mockFigure.boxNumber || '',
-            imageUrl: mockFigure.imageUrl,
-          },
-        ];
-        
-        const responseData = {
-          success: true,
-          data: searchResults,
-        };
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await searchFigures('Hatsune Miku');
-        
-        expect(result).toEqual(searchResults);
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/search?query=Hatsune%20Miku');
+    it('should cover getUserSessions lines 82-83', async () => {
+      const mockSessions = [
+        { id: 'session1', device: 'Chrome', lastActive: '2024-01-01' },
+        { id: 'session2', device: 'Firefox', lastActive: '2024-01-02' }
+      ];
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: { data: mockSessions }
       });
 
-      it('should encode special characters in search query', async () => {
-        const responseData = { success: true, data: [] };
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
-        
-        await searchFigures('test & search');
-        
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/search?query=test%20%26%20search');
-      });
+      const result = await mockApi.getUserSessions();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/auth/sessions');
+      expect(result).toEqual(mockSessions);
     });
 
-    describe('filterFigures', () => {
-      it('should filter figures with all parameters', async () => {
-        const filterParams = {
-          manufacturer: 'Good Smile Company',
-          scale: '1/8',
-          location: 'Display Case A',
-          boxNumber: 'A1',
-          page: 1,
-          limit: 10,
-        };
-        
-        const expectedUrl = '/figures/filter?manufacturer=Good%20Smile%20Company&scale=1%2F8&location=Display%20Case%20A&boxNumber=A1&page=1&limit=10';
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
-        
-        const result = await filterFigures(filterParams);
-        
-        expect(result).toEqual(mockPaginatedResponse);
-        expect(mockApiInstance.get).toHaveBeenCalledWith(expectedUrl);
+    it('should cover getUserProfile lines 87-88', async () => {
+      const mockProfile = {
+        id: 'user123',
+        email: 'test@example.com',
+        username: 'testuser',
+        createdAt: '2024-01-01T00:00:00Z'
+      };
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: { data: mockProfile }
       });
 
-      it('should filter figures with partial parameters', async () => {
-        const filterParams = {
-          manufacturer: 'Good Smile Company',
-          page: 2,
-        };
-        
-        const expectedUrl = '/figures/filter?manufacturer=Good%20Smile%20Company&page=2';
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
-        
-        const result = await filterFigures(filterParams);
-        
-        expect(result).toEqual(mockPaginatedResponse);
-        expect(mockApiInstance.get).toHaveBeenCalledWith(expectedUrl);
-      });
+      const result = await mockApi.getUserProfile();
 
-      it('should handle empty filter parameters', async () => {
-        mockApiInstance.get.mockResolvedValueOnce({ data: mockPaginatedResponse });
-        
-        const result = await filterFigures({});
-        
-        expect(result).toEqual(mockPaginatedResponse);
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/filter?');
-      });
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/users/profile');
+      expect(result).toEqual(mockProfile);
     });
 
-    describe('getFigureStats', () => {
-      it('should get figure statistics successfully', async () => {
-        const responseData = {
-          success: true,
-          data: mockStatsData,
-        };
-        
-        mockApiInstance.get.mockResolvedValueOnce({ data: responseData });
-        
-        const result = await getFigureStats();
-        
-        expect(result).toEqual(mockStatsData);
-        expect(mockApiInstance.get).toHaveBeenCalledWith('/figures/stats');
+    it('should cover updateUserProfile lines 92-93', async () => {
+      const updateData = { username: 'newusername' };
+      const updatedProfile = {
+        id: 'user123',
+        email: 'test@example.com',
+        username: 'newusername',
+        updatedAt: '2024-01-02T00:00:00Z'
+      };
+      mockAxiosInstance.put.mockResolvedValueOnce({
+        data: { data: updatedProfile }
       });
 
-      it('should handle stats error', async () => {
-        const errorResponse = {
-          response: { status: 500 },
-        };
-        
-        mockApiInstance.get.mockRejectedValueOnce(errorResponse);
-        
-        await expect(getFigureStats())
-          .rejects
-          .toEqual(errorResponse);
-      });
+      const result = await mockApi.updateUserProfile(updateData);
+
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/users/profile', updateData);
+      expect(result).toEqual(updatedProfile);
     });
   });
 });

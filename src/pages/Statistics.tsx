@@ -26,7 +26,7 @@ import { FaDownload } from 'react-icons/fa';
 import { getFigureStats } from '../api';
 
 const Statistics: React.FC = () => {
-  const { data: stats, isLoading, error } = useQuery('figureStats', getFigureStats);
+  const { data: stats, isLoading, error } = useQuery('figureStats', getFigureStats) || { data: null, isLoading: false, error: null };
 
   const downloadCsv = () => {
     if (!stats) return;

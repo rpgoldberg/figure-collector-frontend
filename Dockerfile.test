@@ -1,9 +1,9 @@
-FROM node:24-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install bash for test scripts
-RUN apk add --no-cache bash
+# Install bash and curl for test scripts and health checks
+RUN apk add --no-cache bash curl
 
 # Copy package files
 COPY package*.json ./
@@ -17,5 +17,6 @@ COPY . .
 # Ensure test output directory exists
 RUN mkdir -p /app/test-output
 
-# Default test command
-CMD ["npm", "test", "--", "--coverage", "--watchAll=false"]
+# Default to running tests; set RUN_SERVER=1 to start the service
+# This allows the container to be used for both testing and integration scenarios
+CMD ["sh", "-c", "if [ \"$RUN_SERVER\" = \"1\" ]; then npm start; else npm test -- --watchAll=false --coverage; fi"]

@@ -11,8 +11,7 @@ const Layout: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<any>(null);
 
   useEffect(() => {
-    // Register frontend service with backend first
-    const registerFrontend = async () => {
+    const registerFrontend = async (): Promise<boolean> => {
       try {
         const response = await fetch('/register-service', {
           method: 'POST',
@@ -26,39 +25,34 @@ const Layout: React.FC = () => {
           }),
         });
         
-        const responseData = await response.json();
-        if (response.ok) {
-          console.log(`[REGISTER] Frontend v${packageJson.version} registered successfully`);
-        } else {
-          console.warn('[REGISTER] Failed to register frontend service', responseData);
-        }
-      } catch (error) {
-        console.error('[REGISTER] Error registering frontend service:', error);
+        await response.json();
+        return response.ok;
+      } catch {
+        return false;
       }
     };
 
-    // Register frontend first, then fetch version info
-    registerFrontend().then(() => {
-      // Wait a brief moment for registration to complete
+    const fetchVersionInfo = async (): Promise<void> => {
+      try {
+        const response = await fetch('/version');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setVersionInfo(data);
+      } catch {
+        setVersionInfo(null);
+      }
+    };
+
+    const initializeVersionInfo = async (): Promise<void> => {
+      await registerFrontend();
       setTimeout(() => {
-        fetch('/version')
-          .then(res => {
-            if (!res.ok) {
-              throw new Error(`HTTP error! status: ${res.status}`);
-            }
-            return res.json();
-          })
-          .then(data => {
-            setVersionInfo(data);
-            // Console log for developers
-            console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
-          })
-          .catch(err => {
-            console.error('Failed to fetch version info:', err);
-            setVersionInfo(null);
-          });
+        fetchVersionInfo();
       }, 100);
-    });
+    };
+
+    initializeVersionInfo();
   }, []);
 
   return (

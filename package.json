@@ -41,6 +41,11 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "moduleNameMapper": {
+      "@chakra-ui/utils/context": "<rootDir>/node_modules/@chakra-ui/utils/dist/cjs/context.cjs"
+    }
+  },
   "browserslist": {
     "production": [
       ">0.2%",

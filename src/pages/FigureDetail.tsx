@@ -22,7 +22,7 @@ import {
   BreadcrumbLink,
 } from '@chakra-ui/react';
 import { FaEdit, FaTrash, FaArrowLeft, FaExternalLinkAlt } from 'react-icons/fa';
-import { ChevronRightIcon } from '@chakra-ui/icons';
+// import { ChevronRightIcon } from '@chakra-ui/icons'; // Temporarily disabled
 import { getFigureById, deleteFigure } from '../api';
 
 const FigureDetail: React.FC = () => {
@@ -46,7 +46,7 @@ const FigureDetail: React.FC = () => {
         });
       },
     }
-  );
+  ) || { data: null, isLoading: false, error: null };
   
   const deleteMutation = useMutation(() => deleteFigure(id!), {
     onSuccess: () => {
@@ -104,7 +104,7 @@ const FigureDetail: React.FC = () => {
 
   return (
     <Box>
-      <Breadcrumb spacing="8px" separator={<ChevronRightIcon color="gray.500" />} mb={5}>
+      <Breadcrumb spacing="8px" separator=">" mb={5}>
         <BreadcrumbItem>
           <BreadcrumbLink as={RouterLink} to="/">Dashboard</BreadcrumbLink>
         </BreadcrumbItem>

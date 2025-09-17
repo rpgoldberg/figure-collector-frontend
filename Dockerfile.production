@@ -40,102 +40,15 @@ LABEL org.opencontainers.image.source="https://github.com/${GITHUB_ORG}/${GITHUB
 RUN apk add --no-cache curl gettext
 
 # Copy nginx template and entrypoint script
-COPY --chmod=644 nginx/nginx.conf.template /etc/nginx/templates/nginx.conf.template
-COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
+COPY nginx/nginx.conf.template /etc/nginx/templates/nginx.conf.template
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod 755 /docker-entrypoint.sh
 
-# Setup fallback nginx config if template is missing
-RUN \
-    if [ ! -f /etc/nginx/nginx.conf ]; then \
-    cat > /etc/nginx/nginx.conf << 'EOF'
-user nginx;
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
+# Note: Fallback nginx config will be handled by the entrypoint script if needed
 
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-    
-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                    '$status $body_bytes_sent "$http_referer" '
-                    '"$http_user_agent" "$http_x_forwarded_for"';
-    
-    access_log /var/log/nginx/access.log main;
-    
-    sendfile on;
-    tcp_nopush on;
-    tcp_nodelay on;
-    keepalive_timeout 65;
-    types_hash_max_size 2048;
-    
-    gzip on;
-    gzip_disable "msie6";
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css text/xml text/javascript 
-               application/json application/javascript application/xml+rss 
-               application/rss+xml application/atom+xml image/svg+xml 
-               text/x-js text/x-cross-domain-policy application/x-font-ttf 
-               application/x-font-opentype application/vnd.ms-fontobject 
-               image/x-icon;
-    
-    server {
-        listen 80;
-        listen [::]:80;
-        server_name localhost;
-        
-        root /usr/share/nginx/html;
-        index index.html;
-        
-        # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        
-        # Cache static assets
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-        
-        # React Router support
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-        
-        # API proxy - this is fallback only, template should be used
-        location /api {
-            proxy_pass http://backend:5050;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-        
-        # Health check endpoint
-        location /health {
-            access_log off;
-            return 200 "healthy\n";
-            add_header Content-Type text/plain;
-        }
-    }
-}
-EOF
-    ; fi
-
-# Copy built React app from builder with read-only permissions
-# Static files are owned by root:root with 644 permissions (read-only)
-COPY --from=builder --chown=root:root --chmod=644 /app/build /usr/share/nginx/html
+# Copy built React app from builder
+# Static files are owned by root:root (read-only)
+COPY --from=builder --chown=root:root /app/build /usr/share/nginx/html
 
 # Set appropriate permissions for nginx
 # Static files remain read-only, only cache/log directories are writable

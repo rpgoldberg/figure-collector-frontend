@@ -39,10 +39,8 @@ LABEL org.opencontainers.image.source="https://github.com/${GITHUB_ORG}/${GITHUB
 # Install curl and gettext (for envsubst) for template processing
 RUN apk add --no-cache curl gettext
 
-# Copy nginx template and entrypoint script
-COPY nginx/nginx.conf.template /etc/nginx/templates/nginx.conf.template
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod 755 /docker-entrypoint.sh
+# Copy nginx template (will be processed to /etc/nginx/conf.d/default.conf)
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 # Note: Fallback nginx config will be handled by the entrypoint script if needed
 
@@ -76,5 +74,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost/health || exit 1
 
-# Use our entrypoint script to process the template
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# Use default nginx entrypoint which processes templates automatically
+CMD ["nginx", "-g", "daemon off;"]

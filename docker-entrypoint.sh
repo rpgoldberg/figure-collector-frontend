@@ -21,7 +21,7 @@ fi
 if [ -z "$FRONTEND_PORT" ]; then
     echo "ERROR: FRONTEND_PORT environment variable is required"
     echo "  Production: FRONTEND_PORT=5051"
-    echo "  Development: FRONTEND_PORT=3000"
+    echo "  Development: FRONTEND_PORT=5071"
     echo "  Test: FRONTEND_PORT=5056"
     exit 1
 fi

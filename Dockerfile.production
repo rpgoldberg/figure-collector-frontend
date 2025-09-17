@@ -35,11 +35,15 @@ LABEL org.opencontainers.image.description="React frontend for Figure Collector"
 LABEL org.opencontainers.image.vendor="Figure Collector Services"
 LABEL org.opencontainers.image.source="https://github.com/${GITHUB_ORG}/${GITHUB_REPO}"
 
-# Copy custom nginx config with read-only permissions
-COPY --chmod=644 nginx.conf /etc/nginx/nginx.conf 2>/dev/null || true
+# Install curl and gettext (for envsubst) for template processing
+RUN apk add --no-cache curl gettext
 
-# Install curl and setup default nginx config if needed in a single layer
-RUN apk add --no-cache curl && \
+# Copy nginx template and entrypoint script
+COPY --chmod=644 nginx/nginx.conf.template /etc/nginx/templates/nginx.conf.template
+COPY --chmod=755 docker-entrypoint.sh /docker-entrypoint.sh
+
+# Setup fallback nginx config if template is missing
+RUN \
     if [ ! -f /etc/nginx/nginx.conf ]; then \
     cat > /etc/nginx/nginx.conf << 'EOF'
 user nginx;
@@ -104,9 +108,9 @@ http {
             try_files $uri $uri/ /index.html;
         }
         
-        # API proxy (if needed)
+        # API proxy - this is fallback only, template should be used
         location /api {
-            proxy_pass $BACKEND_URL;
+            proxy_pass http://backend:5050;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
@@ -140,9 +144,17 @@ RUN chmod -R 644 /usr/share/nginx/html && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid
+    chown -R nginx:nginx /var/run/nginx.pid && \
+    mkdir -p /etc/nginx/templates && \
+    chown nginx:nginx /etc/nginx
 
-USER nginx
+# Environment variables with defaults
+ENV BACKEND_HOST=backend
+ENV BACKEND_PORT=5050
+ENV FRONTEND_PORT=80
+
+# Stay as root for template processing, nginx will drop privileges
+USER root
 
 EXPOSE 80
 
@@ -150,4 +162,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost/health || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+# Use our entrypoint script to process the template
+ENTRYPOINT ["/docker-entrypoint.sh"]

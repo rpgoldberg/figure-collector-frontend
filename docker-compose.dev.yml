@@ -1,0 +1,25 @@
+version: '3.8'
+
+# Development Docker Compose with correct build args
+services:
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # CRITICAL: Set the backend API URL at BUILD TIME
+        REACT_APP_API_URL: http://backend-dev:5050/api
+        NODE_ENV: development
+    environment:
+      # These are for nginx, not React
+      BACKEND_HOST: backend-dev
+      BACKEND_PORT: 5050
+      FRONTEND_PORT: 3000
+    ports:
+      - "3000:80"
+    networks:
+      - figure-collector
+
+networks:
+  figure-collector:
+    external: true

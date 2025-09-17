@@ -13,7 +13,7 @@ fi
 if [ -z "$BACKEND_PORT" ]; then
     echo "ERROR: BACKEND_PORT environment variable is required"
     echo "  Production: BACKEND_PORT=5050"
-    echo "  Development: BACKEND_PORT=5060"
+    echo "  Development: BACKEND_PORT=5070"
     echo "  Test: BACKEND_PORT=5055"
     exit 1
 fi

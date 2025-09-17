@@ -150,7 +150,7 @@ RUN chmod -R 644 /usr/share/nginx/html && \
 
 # Environment variables - MUST be set at runtime
 # Production: BACKEND_HOST=backend BACKEND_PORT=5050 FRONTEND_PORT=5051
-# Development: BACKEND_HOST=backend-dev BACKEND_PORT=5060 FRONTEND_PORT=3000
+# Development: BACKEND_HOST=backend-dev BACKEND_PORT=5070 FRONTEND_PORT=3000
 # Test: BACKEND_HOST=backend-test BACKEND_PORT=5055 FRONTEND_PORT=5056
 
 # Stay as root for template processing, nginx will drop privileges

@@ -30,7 +30,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 # Frontend version is now handled via self-registration to backend
 
 # Copy nginx template
-COPY nginx/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 # Default environment variables (will be overridden by Docker Compose)
 ENV BACKEND_HOST=figure-collector-backend

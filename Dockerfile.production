@@ -18,7 +18,8 @@ RUN npm ci --ignore-scripts
 COPY . .
 
 # Build React app
-ARG REACT_APP_API_URL
+# Default to /api (nginx proxy) - override for direct backend access
+ARG REACT_APP_API_URL=/api
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN npm run build
 

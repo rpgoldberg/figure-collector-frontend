@@ -7,8 +7,10 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # CRITICAL: Set the backend API URL at BUILD TIME
-        REACT_APP_API_URL: http://backend-dev:5050/api
+        # CRITICAL: Set at BUILD TIME
+        # Use /api for production (nginx proxy handles routing)
+        # Use http://backend:port/api for direct backend access (dev only)
+        REACT_APP_API_URL: /api
         NODE_ENV: development
     environment:
       # These are for nginx, not React

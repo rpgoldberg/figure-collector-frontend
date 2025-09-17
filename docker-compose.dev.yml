@@ -8,8 +8,8 @@ services:
       dockerfile: Dockerfile
       args:
         # CRITICAL: Set at BUILD TIME
-        # Use /api for production (nginx proxy handles routing)
-        # Use http://backend:port/api for direct backend access (dev only)
+        # Always use /api when nginx proxy is present (both dev and prod)
+        # Only use http://backend:port/api for local development without nginx
         REACT_APP_API_URL: /api
         NODE_ENV: development
     environment:

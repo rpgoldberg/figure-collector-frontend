@@ -148,10 +148,10 @@ RUN chmod -R 644 /usr/share/nginx/html && \
     mkdir -p /etc/nginx/templates && \
     chown nginx:nginx /etc/nginx
 
-# Environment variables with defaults
-ENV BACKEND_HOST=backend
-ENV BACKEND_PORT=5050
-ENV FRONTEND_PORT=80
+# Environment variables - MUST be set at runtime
+# Production: BACKEND_HOST=backend BACKEND_PORT=5050 FRONTEND_PORT=5051
+# Development: BACKEND_HOST=backend-dev BACKEND_PORT=5060 FRONTEND_PORT=3000
+# Test: BACKEND_HOST=backend-test BACKEND_PORT=5055 FRONTEND_PORT=5056
 
 # Stay as root for template processing, nginx will drop privileges
 USER root

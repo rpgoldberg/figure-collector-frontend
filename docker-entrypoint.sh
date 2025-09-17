@@ -1,12 +1,33 @@
 #!/bin/sh
 set -e
 
-# Default values
-: ${BACKEND_HOST:=backend}
-: ${BACKEND_PORT:=5050}
-: ${FRONTEND_PORT:=3000}
+# Check required environment variables
+if [ -z "$BACKEND_HOST" ]; then
+    echo "ERROR: BACKEND_HOST environment variable is required"
+    echo "  Production: BACKEND_HOST=backend"
+    echo "  Development: BACKEND_HOST=backend-dev"
+    echo "  Test: BACKEND_HOST=backend-test"
+    exit 1
+fi
+
+if [ -z "$BACKEND_PORT" ]; then
+    echo "ERROR: BACKEND_PORT environment variable is required"
+    echo "  Production: BACKEND_PORT=5050"
+    echo "  Development: BACKEND_PORT=5060"
+    echo "  Test: BACKEND_PORT=5055"
+    exit 1
+fi
+
+if [ -z "$FRONTEND_PORT" ]; then
+    echo "ERROR: FRONTEND_PORT environment variable is required"
+    echo "  Production: FRONTEND_PORT=5051"
+    echo "  Development: FRONTEND_PORT=3000"
+    echo "  Test: FRONTEND_PORT=5056"
+    exit 1
+fi
 
 echo "Starting Frontend with configuration:"
+echo "  Environment: ${NODE_ENV:-not set}"
 echo "  BACKEND_HOST: ${BACKEND_HOST}"
 echo "  BACKEND_PORT: ${BACKEND_PORT}"
 echo "  FRONTEND_PORT: ${FRONTEND_PORT}"

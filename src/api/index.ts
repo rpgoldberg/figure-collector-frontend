@@ -4,6 +4,11 @@ import { Figure, FigureFormData, PaginatedResponse, SearchResult, StatsData, Use
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
+// DEBUGGING: Log the API URL being used
+console.log('[FRONTEND DEBUG] API_URL configured as:', API_URL);
+console.log('[FRONTEND DEBUG] Environment:', process.env.NODE_ENV);
+console.log('[FRONTEND DEBUG] Full REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
@@ -56,7 +61,12 @@ api.interceptors.response.use(
 
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
+  console.log('[FRONTEND DEBUG] Attempting login to:', API_URL + '/auth/login');
+  console.log('[FRONTEND DEBUG] Login payload:', { email, password: '***hidden***' });
+
   const response = await api.post('/auth/login', { email, password });
+  console.log('[FRONTEND DEBUG] Login response received:', response.data);
+
   const userData = response.data?.data;
 
   // Handle missing or malformed response data

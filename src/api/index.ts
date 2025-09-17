@@ -1,13 +1,15 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { Figure, FigureFormData, PaginatedResponse, SearchResult, StatsData, User } from '../types';
+import { createLogger } from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
+const logger = createLogger('API');
 
 // DEBUGGING: Log the API URL being used
-console.log('[FRONTEND DEBUG] API_URL configured as:', API_URL);
-console.log('[FRONTEND DEBUG] Environment:', process.env.NODE_ENV);
-console.log('[FRONTEND DEBUG] Full REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+logger.info('API_URL configured as:', API_URL);
+logger.info('Environment:', process.env.NODE_ENV);
+logger.verbose('Full REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
 
 // Create axios instance
 const api = axios.create({
@@ -61,11 +63,11 @@ api.interceptors.response.use(
 
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
-  console.log('[FRONTEND DEBUG] Attempting login to:', API_URL + '/auth/login');
-  console.log('[FRONTEND DEBUG] Login payload:', { email, password: '***hidden***' });
+  logger.verbose('Attempting login to:', API_URL + '/auth/login');
+  logger.verbose('Login payload:', { email, password: '***hidden***' });
 
   const response = await api.post('/auth/login', { email, password });
-  console.log('[FRONTEND DEBUG] Login response received:', response.data);
+  logger.verbose('Login response received:', response.data);
 
   const userData = response.data?.data;
 

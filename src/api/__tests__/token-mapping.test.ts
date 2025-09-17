@@ -4,19 +4,28 @@
  * mapped to the Frontend's expected token field
  */
 
-import { loginUser, registerUser } from '../index';
-
-// Mock the axios module
-jest.mock('axios');
-import axios from 'axios';
-
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+// Mock the auth store BEFORE any imports
+jest.mock('../../stores/authStore', () => ({
+  useAuthStore: {
+    getState: jest.fn(() => ({
+      user: null,
+      setUser: jest.fn(),
+      logout: jest.fn()
+    }))
+  }
+}));
 
 describe('Authentication Token Mapping', () => {
   let mockApiInstance: any;
+  let loginUser: any;
+  let registerUser: any;
 
   beforeEach(() => {
+    // Clear all mocks
     jest.clearAllMocks();
+
+    // Reset modules to get fresh imports
+    jest.resetModules();
 
     // Create mock axios instance
     mockApiInstance = {
@@ -38,12 +47,20 @@ describe('Authentication Token Mapping', () => {
       },
     };
 
-    // Mock axios.create to return our mock instance
-    mockedAxios.create = jest.fn(() => mockApiInstance);
+    // Mock axios module with our instance
+    jest.doMock('axios', () => ({
+      create: jest.fn(() => mockApiInstance)
+    }));
 
-    // Re-import to trigger module initialization with mocked axios
-    jest.resetModules();
-    require('../index');
+    // Now require the module - it will use our mocked axios
+    const apiModule = require('../index');
+    loginUser = apiModule.loginUser;
+    registerUser = apiModule.registerUser;
+  });
+
+  afterEach(() => {
+    // Clean up the mock
+    jest.dontMock('axios');
   });
 
   describe('loginUser', () => {
@@ -64,10 +81,7 @@ describe('Authentication Token Mapping', () => {
 
       mockApiInstance.post.mockResolvedValueOnce(backendResponse);
 
-      // Import the actual function after mocking
-      const { loginUser: actualLoginUser } = require('../index');
-
-      const result = await actualLoginUser('test@example.com', 'password');
+      const result = await loginUser('test@example.com', 'password');
 
       // Frontend should receive token field (not accessToken)
       expect(result).toEqual({
@@ -99,9 +113,7 @@ describe('Authentication Token Mapping', () => {
 
       mockApiInstance.post.mockResolvedValueOnce(backendResponse);
 
-      const { loginUser: actualLoginUser } = require('../index');
-
-      const result = await actualLoginUser('test@example.com', 'password');
+      const result = await loginUser('test@example.com', 'password');
 
       // Should still return user data with undefined token
       expect(result).toEqual({
@@ -109,27 +121,21 @@ describe('Authentication Token Mapping', () => {
         username: 'testuser',
         email: 'test@example.com',
         isAdmin: false,
-        token: undefined
+        token: undefined  // Token is undefined when accessToken is missing
       });
     });
 
     it('should handle completely missing response data', async () => {
-      // Malformed backend response
+      // Malformed response - no data property
       const backendResponse = {
-        data: {
-          // No data field
-          success: true,
-          message: 'Login successful'
-        }
+        data: null
       };
 
       mockApiInstance.post.mockResolvedValueOnce(backendResponse);
 
-      const { loginUser: actualLoginUser } = require('../index');
+      const result = await loginUser('test@example.com', 'password');
 
-      const result = await actualLoginUser('test@example.com', 'password');
-
-      // Should return undefined for missing data
+      // Should return undefined when data is missing
       expect(result).toBeUndefined();
     });
   });
@@ -152,9 +158,7 @@ describe('Authentication Token Mapping', () => {
 
       mockApiInstance.post.mockResolvedValueOnce(backendResponse);
 
-      const { registerUser: actualRegisterUser } = require('../index');
-
-      const result = await actualRegisterUser('newuser', 'new@example.com', 'password');
+      const result = await registerUser('newuser', 'new@example.com', 'password');
 
       // Frontend should receive token field (not accessToken)
       expect(result).toEqual({
@@ -165,47 +169,46 @@ describe('Authentication Token Mapping', () => {
         token: 'new-jwt-token'  // Frontend field name
       });
 
-      // Should NOT have accessToken or refreshToken fields
+      // Should NOT have accessToken field
       expect(result).not.toHaveProperty('accessToken');
       expect(result).not.toHaveProperty('refreshToken');
     });
   });
 
   describe('Token Field Consistency', () => {
-    it('should ensure axios interceptor uses token field from user store', () => {
-      // This test verifies the request interceptor uses the correct field
-      const requestInterceptor = mockApiInstance.interceptors.request.use.mock.calls[0][0];
+    it('should ensure axios interceptor uses token field from user store', async () => {
+      // Mock useAuthStore to return a user with token field
+      const mockUser = {
+        _id: 'user123',
+        username: 'testuser',
+        email: 'test@example.com',
+        isAdmin: false,
+        token: 'stored-jwt-token'  // Frontend uses token field
+      };
 
-      // Mock the auth store
-      const mockGetState = jest.fn().mockReturnValue({
-        user: {
-          _id: 'user123',
-          username: 'testuser',
-          email: 'test@example.com',
-          isAdmin: false,
-          token: 'stored-jwt-token'  // Frontend uses token field
-        }
+      // Update the mock to return our user
+      const { useAuthStore } = require('../../stores/authStore');
+      useAuthStore.getState.mockReturnValue({
+        user: mockUser,
+        setUser: jest.fn(),
+        logout: jest.fn()
       });
 
-      // Replace the actual getState with our mock
-      jest.mock('../../stores/authStore', () => ({
-        useAuthStore: {
-          getState: mockGetState
-        }
-      }));
+      // Verify the interceptor was set up
+      expect(mockApiInstance.interceptors.request.use).toHaveBeenCalled();
 
+      // Get the interceptor function and test it
+      const interceptorFn = mockApiInstance.interceptors.request.use.mock.calls[0][0];
       const config = { headers: {} };
-      requestInterceptor(config);
+      const updatedConfig = interceptorFn(config);
 
-      // Verify the Authorization header is set correctly
-      expect(config.headers.Authorization).toBe('Bearer stored-jwt-token');
+      // Should add Bearer token from user.token field
+      expect(updatedConfig.headers.Authorization).toBe('Bearer stored-jwt-token');
     });
   });
 
   describe('Critical Bug Prevention', () => {
     it('should prevent authentication redirect loop by ensuring token is attached', async () => {
-      // This test simulates the exact bug that was fixed
-
       // 1. User logs in successfully
       const loginResponse = {
         data: {
@@ -214,52 +217,35 @@ describe('Authentication Token Mapping', () => {
             username: 'testuser',
             email: 'test@example.com',
             isAdmin: false,
-            accessToken: 'valid-jwt-token'
+            accessToken: 'valid-jwt-token'  // Backend sends accessToken
           }
         }
       };
 
       mockApiInstance.post.mockResolvedValueOnce(loginResponse);
 
-      const { loginUser: actualLoginUser } = require('../index');
-      const user = await actualLoginUser('test@example.com', 'password');
+      const user = await loginUser('test@example.com', 'password');
 
       // 2. Verify user has token field (not accessToken)
       expect(user.token).toBe('valid-jwt-token');
       expect(user.accessToken).toBeUndefined();
 
       // 3. Simulate making an authenticated API call
-      const mockAuthStore = {
-        user: user,  // User from login with token field
-        isAuthenticated: true
-      };
+      const { useAuthStore } = require('../../stores/authStore');
+      useAuthStore.getState.mockReturnValue({
+        user: user,  // User object with token field
+        setUser: jest.fn(),
+        logout: jest.fn()
+      });
 
-      // Mock useAuthStore.getState
-      const useAuthStore = {
-        getState: () => mockAuthStore
-      };
+      // 4. The interceptor should attach the token
+      const interceptorFn = mockApiInstance.interceptors.request.use.mock.calls[0][0];
+      const config = { headers: {} };
+      const updatedConfig = interceptorFn(config);
 
-      // Get the request interceptor
-      const requestInterceptor = mockApiInstance.interceptors.request.use.mock.calls[0][0];
-
-      // Create a config object for an API request
-      const config = {
-        headers: {},
-        url: '/api/figures',
-        method: 'GET'
-      };
-
-      // Mock the getState to return our user
-      jest.spyOn(require('../../stores/authStore').useAuthStore, 'getState')
-        .mockReturnValue(mockAuthStore);
-
-      // Apply the interceptor
-      const modifiedConfig = requestInterceptor(config);
-
-      // 4. Verify the Authorization header is set
-      // This would have been undefined if using wrong field name
-      expect(modifiedConfig.headers.Authorization).toBe('Bearer valid-jwt-token');
-      expect(modifiedConfig.headers.Authorization).not.toBe('Bearer undefined');
+      // 5. Verify token is attached correctly - THIS IS THE CRITICAL BUG FIX
+      expect(updatedConfig.headers.Authorization).toBe('Bearer valid-jwt-token');
+      expect(updatedConfig.headers.Authorization).not.toBe('Bearer undefined');
     });
   });
 });

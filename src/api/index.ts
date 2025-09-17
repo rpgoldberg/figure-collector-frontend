@@ -25,7 +25,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     // On successful API calls, check if we got a new token
-    const newToken = response.headers['x-new-token'] || response.headers['authorization'];
+    const newToken = response.headers['x-new-token'] || response.headers['x-access-token'];
     if (newToken) {
       const { user, setUser } = useAuthStore.getState();
       if (user) {
@@ -57,17 +57,40 @@ api.interceptors.response.use(
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
   const response = await api.post('/auth/login', { email, password });
-  return response.data.data;
+  const userData = response.data.data;
+
+  // Map accessToken to token for frontend compatibility
+  return {
+    _id: userData._id,
+    username: userData.username,
+    email: userData.email,
+    isAdmin: userData.isAdmin,
+    token: userData.accessToken  // Map accessToken to token
+  };
 };
 
 export const registerUser = async (username: string, email: string, password: string): Promise<User> => {
   const response = await api.post('/auth/register', { username, email, password });
-  return response.data.data;
+  const userData = response.data.data;
+
+  // Map accessToken to token for frontend compatibility
+  return {
+    _id: userData._id,
+    username: userData.username,
+    email: userData.email,
+    isAdmin: userData.isAdmin,
+    token: userData.accessToken  // Map accessToken to token
+  };
 };
 
 export const refreshToken = async (): Promise<{ token: string }> => {
   const response = await api.post('/auth/refresh');
-  return response.data.data;
+  const data = response.data.data;
+
+  // Map accessToken to token for frontend compatibility
+  return {
+    token: data.accessToken || data.token
+  };
 };
 
 export const logoutUser = async (): Promise<void> => {

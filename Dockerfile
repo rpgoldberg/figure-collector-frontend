@@ -4,17 +4,18 @@ WORKDIR /app
 
 # Accept build arguments for React environment variables
 ARG REACT_APP_API_URL=/api
-ARG NODE_ENV=production
-
-# Set them as environment variables for the build
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
-ENV NODE_ENV=$NODE_ENV
 
 COPY package*.json ./
 
+# Install dependencies without NODE_ENV=production to ensure all packages are installed
 RUN npm install
 
 COPY . .
+
+# Set environment variables for the build
+ARG NODE_ENV=production
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV NODE_ENV=$NODE_ENV
 
 # Build will now have access to REACT_APP_API_URL
 RUN npm run build

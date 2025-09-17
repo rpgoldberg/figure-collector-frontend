@@ -57,7 +57,12 @@ api.interceptors.response.use(
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
   const response = await api.post('/auth/login', { email, password });
-  const userData = response.data.data;
+  const userData = response.data?.data;
+
+  // Handle missing or malformed response data
+  if (!userData) {
+    return undefined as any;  // Return undefined for missing data
+  }
 
   // Map accessToken to token for frontend compatibility
   return {
@@ -71,7 +76,12 @@ export const loginUser = async (email: string, password: string): Promise<User> 
 
 export const registerUser = async (username: string, email: string, password: string): Promise<User> => {
   const response = await api.post('/auth/register', { username, email, password });
-  const userData = response.data.data;
+  const userData = response.data?.data;
+
+  // Handle missing or malformed response data
+  if (!userData) {
+    return undefined as any;  // Return undefined for missing data
+  }
 
   // Map accessToken to token for frontend compatibility
   return {

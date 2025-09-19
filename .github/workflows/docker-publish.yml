@@ -35,8 +35,6 @@ jobs:
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
       digest: ${{ steps.build.outputs.digest }}
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout code
@@ -104,6 +102,7 @@ jobs:
       packages: write
       actions: read
       id-token: write
+      attestations: write
 
   # Security scan for PRs (local image)
   pr-security-scan:

@@ -46,9 +46,13 @@ RUN apt-get update && apt-get install -y \
 # Create nginx user and set up directories
 RUN useradd --system --no-create-home --shell /bin/false nginx \
     && mkdir -p /var/cache/nginx /var/log/nginx /etc/nginx/templates /etc/nginx/conf.d \
+    && mkdir -p /var/lib/nginx/body /var/lib/nginx/proxy /var/lib/nginx/fastcgi \
+    && mkdir -p /var/lib/nginx/uwsgi /var/lib/nginx/scgi /run/nginx \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx \
     && chown -R nginx:nginx /etc/nginx \
-    && chown -R nginx:nginx /usr/share/nginx
+    && chown -R nginx:nginx /usr/share/nginx \
+    && chown -R nginx:nginx /var/lib/nginx \
+    && chown -R nginx:nginx /run/nginx
 
 COPY --from=build /app/build /usr/share/nginx/html
 
@@ -57,10 +61,15 @@ COPY --from=build /app/build /usr/share/nginx/html
 # Copy nginx template and create startup script
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
+# Configure nginx to not use user directive (we're already running as nginx user)
+# Also remove pid directive (we'll set it via command line)
+RUN sed -i '/^user /d' /etc/nginx/nginx.conf \
+    && sed -i '/^pid /d' /etc/nginx/nginx.conf
+
 # Create startup script to process templates
 RUN echo '#!/bin/bash\n\
 envsubst '\''$BACKEND_HOST $BACKEND_PORT $FRONTEND_PORT'\'' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf\n\
-exec nginx -g "daemon off;"' > /usr/local/bin/start-nginx.sh \
+exec nginx -g "daemon off; pid /run/nginx/nginx.pid;"' > /usr/local/bin/start-nginx.sh \
     && chmod +x /usr/local/bin/start-nginx.sh \
     && chown nginx:nginx /usr/local/bin/start-nginx.sh
 

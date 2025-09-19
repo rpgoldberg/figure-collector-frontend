@@ -64,8 +64,7 @@ api.interceptors.response.use(
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
   logger.verbose('Attempting login to:', API_URL + '/auth/login');
-  /* sonar-disable-next-line */
-  logger.verbose('Login payload:', { email, password: '***hidden***' });
+  logger.verbose('Login payload:', { email, password: '***hidden***' }); // sonar:ignore S2068
 
   const response = await api.post('/auth/login', { email, password });
   logger.verbose('Login response received:', response.data);

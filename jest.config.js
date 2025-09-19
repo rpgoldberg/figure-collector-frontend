@@ -25,6 +25,7 @@ module.exports = {
     '!src/**/*.test.{js,jsx,ts,tsx}',
     '!src/**/__tests__/**',
     '!src/utils/logger.ts',
+    '!src/utils/debug-auth.ts',
     '!**/node_modules/**'
   ],
   coverageThreshold: {

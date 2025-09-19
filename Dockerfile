@@ -1,4 +1,17 @@
-FROM node:24-alpine as build
+# Build stage using Ubuntu 22.04 with official Node.js binaries
+FROM ubuntu:22.04 as build
+
+# Install Node.js 24 using official binaries (avoids package manager CVEs)
+RUN apt-get update && apt-get install -y \
+    curl \
+    xz-utils \
+    && NODE_VERSION=v24.8.0 \
+    && curl -fsSLO https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz \
+    && tar -xJf node-${NODE_VERSION}-linux-x64.tar.xz -C /usr/local --strip-components=1 \
+    && rm node-${NODE_VERSION}-linux-x64.tar.xz \
+    && apt-get remove -y curl xz-utils \
+    && apt-get autoremove -y --purge \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -8,7 +21,7 @@ ARG REACT_APP_API_URL=/api
 COPY package*.json ./
 
 # Install dependencies without NODE_ENV=production to ensure all packages are installed
-RUN npm install
+RUN npm install --no-audit --no-fund
 
 COPY . .
 
@@ -20,10 +33,14 @@ ENV NODE_ENV=$NODE_ENV
 # Build will now have access to REACT_APP_API_URL
 RUN npm run build
 
-FROM nginx:alpine
+# Runtime stage using nginx on Ubuntu (avoiding Alpine CVEs)
+FROM nginx:stable
 
-# Install envsubst for environment variable substitution and curl for health checks
-RUN apk add --no-cache gettext curl
+# Install gettext-base for envsubst and curl for health checks
+RUN apt-get update && apt-get install -y \
+    gettext-base \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/build /usr/share/nginx/html
 

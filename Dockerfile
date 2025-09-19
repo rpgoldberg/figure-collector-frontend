@@ -33,24 +33,39 @@ ENV NODE_ENV=$NODE_ENV
 # Build will now have access to REACT_APP_API_URL
 RUN npm run build
 
-# Runtime stage using nginx unprivileged for better security
-FROM nginxinc/nginx-unprivileged:1.29.1-alpine3.22
+# Runtime stage using Ubuntu-based nginx for better security
+FROM ubuntu:22.04
 
-# Switch to root to install packages
-USER root
+# Install nginx and gettext
+RUN apt-get update && apt-get install -y \
+    nginx \
+    gettext-base \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Install gettext for envsubst (Alpine version)
-RUN apk add --no-cache gettext
-
-# Switch back to nginx user for security
-USER nginx
+# Create nginx user and set up directories
+RUN useradd --system --no-create-home --shell /bin/false nginx \
+    && mkdir -p /var/cache/nginx /var/log/nginx /etc/nginx/templates /etc/nginx/conf.d \
+    && chown -R nginx:nginx /var/cache/nginx /var/log/nginx \
+    && chown -R nginx:nginx /etc/nginx \
+    && chown -R nginx:nginx /usr/share/nginx
 
 COPY --from=build /app/build /usr/share/nginx/html
 
 # Frontend version is now handled via self-registration to backend
 
-# Copy nginx template
+# Copy nginx template and create startup script
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
+
+# Create startup script to process templates
+RUN echo '#!/bin/bash\n\
+envsubst '\''$BACKEND_HOST $BACKEND_PORT $FRONTEND_PORT'\'' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf\n\
+exec nginx -g "daemon off;"' > /usr/local/bin/start-nginx.sh \
+    && chmod +x /usr/local/bin/start-nginx.sh \
+    && chown nginx:nginx /usr/local/bin/start-nginx.sh
+
+# Switch to nginx user for security
+USER nginx
 
 # Default environment variables (will be overridden by Docker Compose)
 ENV BACKEND_HOST=figure-collector-backend
@@ -59,5 +74,5 @@ ENV FRONTEND_PORT=5051
 
 # EXPOSE will be handled by Docker Compose port mapping
 
-# Use nginx's built-in template substitution
-CMD ["nginx", "-g", "daemon off;"]
+# Use custom startup script for template substitution
+CMD ["/usr/local/bin/start-nginx.sh"]

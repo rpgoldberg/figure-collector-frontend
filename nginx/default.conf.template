@@ -46,9 +46,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
     
-    # Proxy /register-service to backend for service registration
-    location /register-service {
-        proxy_pass http://backend/register-service;
+    # Proxy /register-frontend to backend for frontend service registration
+    location /register-frontend {
+        proxy_pass http://backend/register-frontend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

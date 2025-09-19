@@ -1,8 +1,15 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 import { Figure, FigureFormData, PaginatedResponse, SearchResult, StatsData, User } from '../types';
+import { createLogger } from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
+const logger = createLogger('API');
+
+// DEBUGGING: Log the API URL being used
+logger.info('API_URL configured as:', API_URL);
+logger.info('Environment:', process.env.NODE_ENV);
+logger.verbose('Full REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
 
 // Create axios instance
 const api = axios.create({
@@ -25,7 +32,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     // On successful API calls, check if we got a new token
-    const newToken = response.headers['x-new-token'] || response.headers['authorization'];
+    const newToken = response.headers['x-new-token'] || response.headers['x-access-token'];
     if (newToken) {
       const { user, setUser } = useAuthStore.getState();
       if (user) {
@@ -56,18 +63,56 @@ api.interceptors.response.use(
 
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
+  logger.verbose('Attempting login to:', API_URL + '/auth/login');
+  logger.verbose('Login payload:', { email, password: '***hidden***' }); // NOSONAR '***hidden***' is a placeholder string for logging, not a real password
+
   const response = await api.post('/auth/login', { email, password });
-  return response.data.data;
+  logger.verbose('Login response received:', response.data);
+
+  const userData = response.data?.data;
+
+  // Handle missing or malformed response data
+  if (!userData) {
+    return undefined as any;  // Return undefined for missing data
+  }
+
+  // Map accessToken to token for frontend compatibility
+  return {
+    _id: userData._id,
+    username: userData.username,
+    email: userData.email,
+    isAdmin: userData.isAdmin,
+    token: userData.accessToken  // Map accessToken to token
+  };
 };
 
 export const registerUser = async (username: string, email: string, password: string): Promise<User> => {
   const response = await api.post('/auth/register', { username, email, password });
-  return response.data.data;
+  const userData = response.data?.data;
+
+  // Handle missing or malformed response data
+  if (!userData) {
+    return undefined as any;  // Return undefined for missing data
+  }
+
+  // Map accessToken to token for frontend compatibility
+  return {
+    _id: userData._id,
+    username: userData.username,
+    email: userData.email,
+    isAdmin: userData.isAdmin,
+    token: userData.accessToken  // Map accessToken to token
+  };
 };
 
 export const refreshToken = async (): Promise<{ token: string }> => {
   const response = await api.post('/auth/refresh');
-  return response.data.data;
+  const data = response.data.data;
+
+  // Map accessToken to token for frontend compatibility
+  return {
+    token: data.accessToken || data.token
+  };
 };
 
 export const logoutUser = async (): Promise<void> => {

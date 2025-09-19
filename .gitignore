@@ -36,3 +36,22 @@ src/components/__tests__/Layout.simple.test.tsx
 git_command.sh
 test-results.log
 test-results.txt
+
+
+# Claude-specific files
+.claude/
+CLAUDE.md
+*claude-backup*
+
+# Test outputs and reports  
+test-results.log
+junit.xml
+*_TESTING_REPORT.md
+*_TEST_RESULTS.md
+TESTING_SUMMARY.md
+TEST_COVERAGE_REPORT.md
+
+# Backup files
+*.backup
+*.bak
+*~

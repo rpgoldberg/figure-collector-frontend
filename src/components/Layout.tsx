@@ -13,7 +13,7 @@ const Layout: React.FC = () => {
   useEffect(() => {
     const registerFrontend = async (): Promise<boolean> => {
       try {
-        const response = await fetch('/register-service', {
+        const response = await fetch('/register-frontend', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -24,7 +24,7 @@ const Layout: React.FC = () => {
             name: packageJson.name
           }),
         });
-        
+
         await response.json();
         return response.ok;
       } catch {

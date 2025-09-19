@@ -223,9 +223,9 @@ describe('Enhanced API Integration Tests', () => {
         expect(result).toBe(response);
       });
 
-      it('should update token from authorization header', () => {
+      it('should update token from x-access-token header', () => {
         const response = {
-          headers: { authorization: 'Bearer updated-token' },
+          headers: { 'x-access-token': 'Bearer updated-token' },
           data: {},
         };
         mockGetState.mockReturnValue({ user: mockUser, setUser: mockSetUser });
@@ -376,9 +376,9 @@ describe('Enhanced API Integration Tests', () => {
       it('should handle malformed response data', async () => {
         mockApiInstance.post.mockResolvedValueOnce({ data: null });
 
-        // This will throw because response.data.data tries to access data on null
-        await expect(loginUser('test@example.com', 'password'))
-          .rejects.toThrow(Error);
+        // Should return undefined for missing data
+        const result = await loginUser('test@example.com', 'password');
+        expect(result).toBeUndefined();
       });
 
       it('should handle missing data field', async () => {

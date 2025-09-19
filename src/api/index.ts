@@ -64,8 +64,7 @@ api.interceptors.response.use(
 // Auth API
 export const loginUser = async (email: string, password: string): Promise<User> => {
   logger.verbose('Attempting login to:', API_URL + '/auth/login');
-  // NOSONAR: '***hidden***' is a placeholder string for logging, not a real password
-  logger.verbose('Login payload:', { email, password: '***hidden***' });
+  logger.verbose('Login payload:', { email, password: '***hidden***' }); // NOSONAR: '***hidden***' is a placeholder string for logging, not a real password
 
   const response = await api.post('/auth/login', { email, password });
   logger.verbose('Login response received:', response.data);

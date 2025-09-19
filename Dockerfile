@@ -34,7 +34,7 @@ ENV NODE_ENV=$NODE_ENV
 RUN npm run build
 
 # Runtime stage using nginx unprivileged for better security
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.29.1-alpine3.22
 
 # Switch to root to install packages
 USER root

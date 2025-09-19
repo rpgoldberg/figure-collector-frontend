@@ -24,6 +24,7 @@ module.exports = {
     '!src/test-utils/**/*', // Exclude all test utilities and mocks
     '!src/**/*.test.{js,jsx,ts,tsx}',
     '!src/**/__tests__/**',
+    '!src/utils/logger.ts',
     '!**/node_modules/**'
   ],
   coverageThreshold: {

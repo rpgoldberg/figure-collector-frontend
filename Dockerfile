@@ -33,14 +33,17 @@ ENV NODE_ENV=$NODE_ENV
 # Build will now have access to REACT_APP_API_URL
 RUN npm run build
 
-# Runtime stage using nginx on Ubuntu (avoiding Alpine CVEs)
-FROM nginx:stable
+# Runtime stage using nginx unprivileged for better security
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 
-# Install gettext-base for envsubst and curl for health checks
-RUN apt-get update && apt-get install -y \
-    gettext-base \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Switch to root to install packages
+USER root
+
+# Install gettext for envsubst (Alpine version)
+RUN apk add --no-cache gettext
+
+# Switch back to nginx user for security
+USER nginx
 
 COPY --from=build /app/build /usr/share/nginx/html
 

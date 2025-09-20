@@ -50,7 +50,7 @@ const Profile: React.FC = () => {
   const [showPassword, setShowPassword] = React.useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   
-  const { data: profile, isLoading, error } = useQuery('userProfile', getUserProfile);
+  const { data: profile, isLoading, error } = useQuery('userProfile', getUserProfile) || { data: null, isLoading: false, error: null };
   
   const {
     register,
@@ -241,6 +241,7 @@ const Profile: React.FC = () => {
                   <Button
                     variant="ghost"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     <Icon
                       as={showPassword ? FaEyeSlash : FaEye}

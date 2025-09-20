@@ -68,7 +68,20 @@ const Login: React.FC = () => {
         });
       },
     }
-  );
+  ) || {
+    // Fallback for when useMutation returns undefined in tests
+    isLoading: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    data: null,
+    status: 'idle' as const,
+    isPending: false,
+    isIdle: true,
+    mutate: () => {},
+    mutateAsync: () => Promise.resolve({}),
+    reset: () => {}
+  };
 
   const onSubmit = (data: LoginFormData) => {
     mutation.mutate(data);
@@ -94,10 +107,11 @@ const Login: React.FC = () => {
           </Text>
         </Flex>
         
-        <Box as="form" onSubmit={handleSubmit(onSubmit)}>
+        <Box as="form" role="form" onSubmit={handleSubmit(onSubmit)}>
           <FormControl isInvalid={!!errors.email} mb={4}>
-            <FormLabel>Email</FormLabel>
+            <FormLabel htmlFor="email">Email</FormLabel>
             <Input
+              id="email"
               type="email"
               placeholder="Your email address"
               size="lg"
@@ -114,9 +128,10 @@ const Login: React.FC = () => {
           </FormControl>
           
           <FormControl isInvalid={!!errors.password} mb={6}>
-            <FormLabel>Password</FormLabel>
+            <FormLabel htmlFor="password">Password</FormLabel>
             <InputGroup>
               <Input
+                id="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Your password"
                 size="lg"

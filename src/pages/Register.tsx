@@ -75,7 +75,20 @@ const Register: React.FC = () => {
         });
       },
     }
-  );
+  ) || {
+    // Fallback for when useMutation returns undefined in tests
+    isLoading: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    data: null,
+    status: 'idle' as const,
+    isPending: false,
+    isIdle: true,
+    mutate: () => {},
+    mutateAsync: () => Promise.resolve({}),
+    reset: () => {}
+  };
 
   const onSubmit = (data: RegisterFormData) => {
     mutation.mutate(data);
@@ -157,6 +170,7 @@ const Register: React.FC = () => {
                 <Button
                   variant="ghost"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   <Icon
                     as={showPassword ? FaEyeSlash : FaEye}

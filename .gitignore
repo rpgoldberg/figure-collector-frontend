@@ -19,3 +19,39 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Temporary test files
+src/components/__tests__/Layout.basic.test.tsx
+src/components/__tests__/Layout.simple.test.tsx
+
+# Include Claude Code configurations for team collaboration
+# These provide valuable development infrastructure and agent definitions
+# !.claude/
+# !CLAUDE.md
+# Exclude only personal Claude preferences
+.claude/personal/
+.claude/user-*/
+
+# Git helper scripts
+git_command.sh
+test-results.log
+test-results.txt
+
+
+# Claude-specific files
+.claude/
+CLAUDE.md
+*claude-backup*
+
+# Test outputs and reports  
+test-results.log
+junit.xml
+*_TESTING_REPORT.md
+*_TEST_RESULTS.md
+TESTING_SUMMARY.md
+TEST_COVERAGE_REPORT.md
+
+# Backup files
+*.backup
+*.bak
+*~

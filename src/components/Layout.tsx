@@ -11,10 +11,9 @@ const Layout: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<any>(null);
 
   useEffect(() => {
-    // Register frontend service with backend first
-    const registerFrontend = async () => {
+    const registerFrontend = async (): Promise<boolean> => {
       try {
-        const response = await fetch('/register-service', {
+        const response = await fetch('/register-frontend', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -25,49 +24,55 @@ const Layout: React.FC = () => {
             name: packageJson.name
           }),
         });
-        
-        if (response.ok) {
-          console.log(`[REGISTER] Frontend v${packageJson.version} registered successfully`);
-        } else {
-          console.warn('[REGISTER] Failed to register frontend service');
-        }
-      } catch (error) {
-        console.error('[REGISTER] Error registering frontend service:', error);
+
+        await response.json();
+        return response.ok;
+      } catch {
+        return false;
       }
     };
 
-    // Register frontend first, then fetch version info
-    registerFrontend().then(() => {
-      // Wait a brief moment for registration to complete
+    const fetchVersionInfo = async (): Promise<void> => {
+      try {
+        const response = await fetch('/version');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setVersionInfo(data);
+      } catch {
+        setVersionInfo(null);
+      }
+    };
+
+    const initializeVersionInfo = async (): Promise<void> => {
+      await registerFrontend();
       setTimeout(() => {
-        fetch('/version')
-          .then(res => res.json())
-          .then(data => {
-            setVersionInfo(data);
-            // Console log for developers
-            console.log(`App v${data.application?.version || 'unknown'}, Frontend v${data.services?.frontend?.version || 'unknown'}, Backend v${data.services?.backend?.version || 'unknown'}, Scraper v${data.services?.scraper?.version || 'unknown'}`);
-          })
-          .catch(err => console.error('Failed to fetch version info:', err));
+        fetchVersionInfo();
       }, 100);
-    });
+    };
+
+    initializeVersionInfo();
   }, []);
 
   return (
-    <Box minH="100vh" display="flex" flexDirection="column">
-      <Navbar />
+    <Box data-testid="layout" minH="100vh" display="flex" flexDirection="column">
+      <Box data-testid="navbar">
+        <Navbar />
+      </Box>
       <Container maxW="container.xl" pt={5} pb={10} flex="1">
         <Box display="flex" gap={5}>
-          <Box w="250px" display={{ base: 'none', md: 'block' }}>
+          <Box data-testid="sidebar" w="250px" display={{ base: 'none', md: 'block' }}>
             <Sidebar />
           </Box>
-          <Box flex="1">
+          <Box data-testid="outlet" flex="1">
             <Outlet />
           </Box>
         </Box>
       </Container>
       
       {/* Footer with version info */}
-      <Box as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
+      <Box data-testid="footer" role="contentinfo" as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
         <Container maxW="container.xl">
           <Flex justify="space-between" align="center">
             <Text fontSize="sm" color="gray.600">

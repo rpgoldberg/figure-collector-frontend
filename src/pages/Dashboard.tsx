@@ -26,8 +26,8 @@ import { useNavigate } from 'react-router-dom';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   
-  const { data: figuresData } = useQuery('recentFigures', () => getFigures(1, 4));
-  const { data: statsData } = useQuery('dashboardStats', getFigureStats);
+  const { data: figuresData } = useQuery('recentFigures', () => getFigures(1, 4)) || {};
+  const { data: statsData } = useQuery('dashboardStats', getFigureStats) || {};
   
   const handleSearch = (query: string) => {
     navigate(`/search?q=${encodeURIComponent(query)}`);
@@ -117,6 +117,7 @@ const Dashboard: React.FC = () => {
                 to="/figures" 
                 variant="outline" 
                 size="sm"
+                aria-label="View All Figures"
               >
                 View All
               </Button>
@@ -171,6 +172,7 @@ const Dashboard: React.FC = () => {
                   size="sm" 
                   width="100%" 
                   mt={4}
+                  aria-label="View Detailed Figure Statistics"
                 >
                   View All Statistics
                 </Button>

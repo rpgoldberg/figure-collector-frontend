@@ -58,7 +58,20 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://backend:5070",
+  "proxy": {
+    "/api": {
+      "target": "http://backend:5070",
+      "pathRewrite": {
+        "^/api": ""
+      }
+    },
+    "/register-frontend": {
+      "target": "http://backend:5070"
+    },
+    "/version": {
+      "target": "http://backend:5070"
+    }
+  },
   "overrides": {
     "nth-check": "^2.1.1",
     "postcss": "^8.4.31"

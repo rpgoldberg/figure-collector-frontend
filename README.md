@@ -56,6 +56,27 @@ REACT_APP_API_URL=/api
 REACT_APP_BACKEND_URL=http://localhost:5070
 ```
 
+### Development Proxy
+
+The frontend uses `src/setupProxy.js` to proxy API requests during development:
+
+- **Path Rewriting**: Requests to `/api/*` are rewritten to `/*` when forwarded to the backend
+- **Target**: `http://backend:5070` (Docker network) or `http://localhost:5070` (local)
+- **Additional Routes**: `/register-frontend` and `/version` are also proxied
+
+This mirrors the production nginx configuration, ensuring consistent behavior between development and production environments.
+
+**Requirements**:
+- `http-proxy-middleware` package (included in dependencies)
+- Backend service must be running on port 5070 (dev) or 5050 (prod)
+
+**Verify proxy is working**:
+```bash
+# In Docker dev environment
+docker logs figure-collector-frontend-dev | grep HPM
+# Should show: [HPM] Proxy created and [HPM] Proxy rewrite rule created
+```
+
 ### Authentication Endpoints
 
 The frontend now supports the following authentication endpoints:

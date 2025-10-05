@@ -46,9 +46,9 @@ ENV NODE_ENV=development
 
 EXPOSE 3000
 
-# Health check using Node.js
+# Health check using Node.js with explicit timeout handling
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "const req = require('http').get('http://localhost:3000', { timeout: 5000 }, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('timeout', () => { req.destroy(); process.exit(1); }); req.on('error', () => process.exit(1));"
 
 CMD ["npm", "start"]
 
@@ -168,9 +168,9 @@ ENV FRONTEND_PORT=5051
 
 EXPOSE 80
 
-# Health check using Node.js (simpler and more reliable than curl in non-root context)
+# Health check using Node.js with explicit timeout handling
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:80', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "const req = require('http').get('http://localhost:80', { timeout: 5000 }, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('timeout', () => { req.destroy(); process.exit(1); }); req.on('error', () => process.exit(1));"
 
 # Use custom startup script for template substitution
 CMD ["/usr/local/bin/start-nginx.sh"]

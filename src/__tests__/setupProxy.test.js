@@ -21,7 +21,7 @@ jest.mock('http-proxy-middleware', () => {
 });
 
 // Now import setupProxy after the mock is set up
-const setupProxy = require('./setupProxy');
+const setupProxy = require('../setupProxy');
 const { __mockMiddleware: mockMiddleware, __mockCreateProxyMiddleware: mockCreateProxyMiddleware } = require('http-proxy-middleware');
 
 describe('setupProxy', () => {

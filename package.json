@@ -74,7 +74,7 @@
     "@types/react-dom": "^18.2.7",
     "babel-jest": "^29.7.0",
     "babel-plugin-transform-import-meta": "^2.3.3",
-    "http-proxy-middleware": "^2.0.6",
+    "http-proxy-middleware": "^3.0.5",
     "identity-obj-proxy": "^3.0.0",
     "jest-axe": "^6.0.1",
     "jest-canvas-mock": "^2.5.2",

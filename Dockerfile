@@ -121,6 +121,7 @@ RUN apt-get update && apt-get upgrade -y \
     nginx \
     gettext-base \
     curl \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

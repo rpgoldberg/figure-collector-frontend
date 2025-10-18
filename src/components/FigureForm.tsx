@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createLogger } from '../utils/logger';
 import {
   Box,
   Button,
@@ -28,6 +29,8 @@ interface FigureFormProps {
   onSubmit: (data: FigureFormData) => void;
   isLoading: boolean;
 }
+
+const logger = createLogger('FIGURE_FORM');
 
 const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoading }) => {
   const [isScrapingMFC, setIsScrapingMFC] = useState(false);
@@ -310,17 +313,17 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
 
       // Use optimized debounce with stable timer management
       debounceTimer.current = setTimeout(async () => {
-        console.log('[DEBUG] Debounce timer executed');
+        logger.verbose('Debounce timer executed');
         // Capture current values to avoid stale closure
         const linkToScrape = currentMfcLink;
         const currentFormValues = getValues();
 
         // Only proceed if the link hasn't changed since timer was set
         if (linkToScrape === currentFormValues.mfcLink) {
-          console.log('[DEBUG] Link unchanged, calling handleMFCLinkBlur');
+          logger.verbose('Link unchanged, calling handleMFCLinkBlur');
           await handleMFCLinkBlur(linkToScrape);
         } else {
-          console.log('[DEBUG] Link changed during debounce, skipping scrape');
+          logger.verbose('Link changed during debounce, skipping scrape');
         }
         debounceTimer.current = null;
       }, 1000);

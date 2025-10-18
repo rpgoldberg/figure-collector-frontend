@@ -8,6 +8,12 @@ import { BrowserRouter } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import Layout from '../Layout';
 
+// Mock package.json to have consistent test data
+jest.mock('../../../package.json', () => ({
+  name: 'figure-collector-frontend',
+  version: '1.0.0-test'  // Use a fixed test version
+}));
+
 // Mock child components
 jest.mock('../Navbar', () => {
   return function Navbar() {
@@ -88,11 +94,11 @@ describe('Layout Component', () => {
 
       await waitFor(() => {
         const firstCall = (global.fetch as jest.Mock).mock.calls[0];
-        expect(firstCall[0]).toBe('/register-service');
+        expect(firstCall[0]).toBe('/register-frontend');
         expect(firstCall[1].method).toBe('POST');
         expect(JSON.parse(firstCall[1].body)).toEqual({
           serviceName: 'frontend',
-          version: '1.1.0',
+          version: '1.0.0-test',  // Using mocked version
           name: 'figure-collector-frontend'
         });
       });
@@ -119,7 +125,7 @@ describe('Layout Component', () => {
       const mockVersionData = {
         application: { version: '1.2.0', releaseDate: '2024-01-15' },
         services: {
-          frontend: { version: '1.1.0', status: 'ok' },
+          frontend: { version: '1.0.0-test', status: 'ok' },
           backend: { version: '2.0.0', status: 'ok' }
         }
       };
@@ -281,7 +287,7 @@ describe('Layout Component', () => {
       const mockVersionData = {
         application: { version: '1.0.0', releaseDate: '2024-01-01' },
         services: {
-          frontend: { version: '1.1.0', status: 'ok' },
+          frontend: { version: '1.0.0-test', status: 'ok' },
           backend: { version: '2.0.0', status: 'error' },
           scraper: { version: '1.5.0', status: 'ok' }
         }
@@ -310,7 +316,7 @@ describe('Layout Component', () => {
         expect(screen.getByText('Frontend:')).toBeInTheDocument();
         expect(screen.getByText('Backend:')).toBeInTheDocument();
         expect(screen.getByText('Scraper:')).toBeInTheDocument();
-        expect(screen.getByText('v1.1.0')).toBeInTheDocument();
+        expect(screen.getByText('v1.0.0-test')).toBeInTheDocument();
         expect(screen.getByText('v2.0.0')).toBeInTheDocument();
         expect(screen.getByText('v1.5.0')).toBeInTheDocument();
       });

@@ -53,7 +53,7 @@ npm test:ci
 REACT_APP_API_URL=/api
 
 # Optional for development
-REACT_APP_BACKEND_URL=http://localhost:5060
+REACT_APP_BACKEND_URL=http://localhost:5070
 ```
 
 ### Authentication Endpoints

@@ -5,7 +5,7 @@
 # ============================================================================
 # BASE STAGE - Ubuntu 22.04 with Node.js and security patches
 # ============================================================================
-FROM ubuntu:22.04 as base
+FROM ubuntu:24.04 as base
 
 # Update all packages including libtiff5 security patch (CVE-2025-9900)
 # Target: libtiff5 4.3.0-6ubuntu0.11 → 4.3.0-6ubuntu0.12
@@ -103,7 +103,7 @@ RUN npm run build
 # ============================================================================
 # PRODUCTION STAGE - Nginx server with built React app
 # ============================================================================
-FROM ubuntu:22.04 as production
+FROM ubuntu:24.04 as production
 
 # Build arguments for OCI labels
 ARG GITHUB_ORG=rpgoldberg

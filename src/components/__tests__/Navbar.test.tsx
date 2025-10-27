@@ -104,10 +104,13 @@ describe('Navbar', () => {
     });
 
     render(<Navbar />);
-    
+
     await userEvent.click(screen.getByTestId('user-avatar-button'));
-    
-    expect(screen.getByRole('menuitem', { name: /profile/i })).toBeInTheDocument();
+
+    // Wait for menu items to appear (Chakra UI Menu uses portals and animations)
+    await waitFor(() => {
+      expect(screen.getByRole('menuitem', { name: /profile/i })).toBeInTheDocument();
+    });
     expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
   });
 
@@ -143,12 +146,14 @@ describe('Navbar', () => {
     });
 
     render(<Navbar />);
-    
+
     const toggleButton = screen.getByTestId('mobile-nav-toggle');
     await userEvent.click(toggleButton);
-    
-    // Mobile nav expands - check for navigation links
-    const navLinks = screen.getAllByRole('link');
-    expect(navLinks.length).toBeGreaterThan(4);
+
+    // Wait for mobile nav to expand (Collapse animation needs time)
+    await waitFor(() => {
+      const navLinks = screen.getAllByRole('link');
+      expect(navLinks.length).toBeGreaterThan(4);
+    });
   });
 });

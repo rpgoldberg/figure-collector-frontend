@@ -27,6 +27,7 @@ import { HamburgerIcon, CloseIcon, ChevronDownIcon, ChevronRightIcon } from '@ch
 import { FaUser, FaSignOutAlt } from 'react-icons/fa';
 import { useAuthStore } from '../stores/authStore';
 import { useQueryClient } from 'react-query';
+import ThemeToggle from './ThemeToggle';
 
 const Navbar: React.FC = () => {
   const { isOpen, onToggle } = useDisclosure();
@@ -110,7 +111,9 @@ const Navbar: React.FC = () => {
           justify={'flex-end'}
           direction={'row'}
           spacing={6}
+          align={'center'}
         >
+          <ThemeToggle />
           {user ? (
             <Menu>
               <MenuButton

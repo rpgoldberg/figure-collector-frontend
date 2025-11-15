@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Box, Image, Text, Badge, Link, Flex, IconButton, useToast } from '@chakra-ui/react';
+import { Box, Image, Text, Badge, Link, Flex, IconButton, useToast, useColorModeValue } from '@chakra-ui/react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 import { Figure } from '../types';
 import { deleteFigure } from '../api';
@@ -13,7 +13,10 @@ interface FigureCardProps {
 const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
   const toast = useToast();
   const queryClient = useQueryClient();
-  
+
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const imageBg = useColorModeValue('gray.50', 'gray.700');
+
   const deleteMutation = useMutation(() => deleteFigure(figure._id), {
     onSuccess: () => {
       // Invalidate all queries that might contain figure data
@@ -51,17 +54,17 @@ const FigureCard: React.FC<FigureCardProps> = ({ figure }) => {
       borderWidth="1px"
       borderRadius="lg"
       overflow="hidden"
-      bg="white"
+      bg={cardBg}
       shadow="md"
       transition="all 0.3s"
       _hover={{ shadow: 'lg', transform: 'translateY(-2px)' }}
     >
-      <Box 
-        display="flex" 
-        alignItems="center" 
-        justifyContent="center" 
-        h="200px" 
-        bg="gray.50"
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        h="200px"
+        bg={imageBg}
         overflow="hidden"
       >
         <Image

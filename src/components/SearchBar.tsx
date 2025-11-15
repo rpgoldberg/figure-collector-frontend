@@ -5,6 +5,7 @@ import {
   InputRightElement,
   IconButton,
   Box,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { FaSearch } from 'react-icons/fa';
 
@@ -13,11 +14,12 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ 
-  onSearch, 
-  placeholder = 'Search your figures...' 
+const SearchBar: React.FC<SearchBarProps> = ({
+  onSearch,
+  placeholder = 'Search your figures...'
 }) => {
   const [query, setQuery] = useState('');
+  const inputBg = useColorModeValue('white', 'gray.800');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          bg="white"
+          bg={inputBg}
           boxShadow="sm"
           borderRadius="lg"
         />

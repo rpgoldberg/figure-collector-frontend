@@ -18,6 +18,7 @@ import {
   useToast,
   Spinner,
   Image,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { useForm } from 'react-hook-form';
 import { FaLink, FaQuestionCircle, FaImage } from 'react-icons/fa';
@@ -35,6 +36,10 @@ const logger = createLogger('FIGURE_FORM');
 const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoading }) => {
   const [isScrapingMFC, setIsScrapingMFC] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  const previewBorderColor = useColorModeValue('gray.200', 'gray.600');
+  const previewBg = useColorModeValue('gray.50', 'gray.700');
+
   const {
     register,
     handleSubmit,
@@ -532,14 +537,14 @@ const FigureForm: React.FC<FigureFormProps> = ({ initialData, onSubmit, isLoadin
                 Leave blank to auto-fetch from MFC
               </Text>
               {imageUrl && (
-                <Box mt={4} p={4} border="1px" borderColor="gray.200" borderRadius="md">
+                <Box mt={4} p={4} border="1px" borderColor={previewBorderColor} borderRadius="md">
                   <Text fontSize="sm" fontWeight="semibold" mb={2}>Image Preview:</Text>
-                  <Box 
-                    display="flex" 
-                    alignItems="center" 
-                    justifyContent="center" 
-                    maxH="300px" 
-                    bg="gray.50"
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    maxH="300px"
+                    bg={previewBg}
                     borderRadius="md"
                     overflow="hidden"
                   >

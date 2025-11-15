@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text, Button, VStack, Icon } from '@chakra-ui/react';
+import { Box, Text, Button, VStack, Icon, useColorModeValue } from '@chakra-ui/react';
 import { FaPlus, FaCube, FaSearch, FaTimes, FaFilter } from 'react-icons/fa';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -8,10 +8,12 @@ interface EmptyStateProps {
   message?: string;
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({ 
+const EmptyState: React.FC<EmptyStateProps> = ({
   type,
   message
 }) => {
+  const emptyStateBg = useColorModeValue('white', 'gray.800');
+
   const getContent = () => {
     switch (type) {
       case 'collection':
@@ -66,7 +68,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
     <Box
       p={10}
       borderRadius="lg"
-      bg="white"
+      bg={emptyStateBg}
       shadow="sm"
       textAlign="center"
       my={10}

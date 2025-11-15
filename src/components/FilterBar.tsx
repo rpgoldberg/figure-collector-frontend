@@ -10,6 +10,7 @@ import {
   useDisclosure,
   Collapse,
   SimpleGrid,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { FaFilter, FaTimes } from 'react-icons/fa';
 import { useQuery } from 'react-query';
@@ -30,10 +31,12 @@ interface FilterBarProps {
 const FilterBar: React.FC<FilterBarProps> = ({ onFilter, initialFilters = {} }) => {
   const { isOpen, onToggle, onClose } = useDisclosure();
   const [filters, setFilters] = useState<FilterValues>(initialFilters);
-  
+
   const { data: stats } = useQuery('figureStats', getFigureStats, {
     enabled: isOpen,
   });
+
+  const filterBg = useColorModeValue('white', 'gray.800');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -81,13 +84,13 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilter, initialFilters = {} }) 
       </Flex>
 
       <Collapse in={isOpen} animateOpacity>
-        <Box 
-          as="form" 
-          onSubmit={handleSubmit} 
-          p={4} 
-          bg="white" 
-          borderRadius="md" 
-          shadow="sm" 
+        <Box
+          as="form"
+          onSubmit={handleSubmit}
+          p={4}
+          bg={filterBg}
+          borderRadius="md"
+          shadow="sm"
           mb={4}
         >
           <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>

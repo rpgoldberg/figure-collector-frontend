@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Box, Container, Text, Flex, Popover, PopoverTrigger, PopoverContent, PopoverBody, VStack, Badge, HStack } from '@chakra-ui/react';
+import { Box, Container, Text, Flex, Popover, PopoverTrigger, PopoverContent, PopoverBody, VStack, Badge, HStack, useColorModeValue } from '@chakra-ui/react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
@@ -9,6 +9,13 @@ const packageJson = require('../../package.json');
 
 const Layout: React.FC = () => {
   const [versionInfo, setVersionInfo] = useState<any>(null);
+
+  // Dark mode colors
+  const footerBg = useColorModeValue('gray.50', 'gray.800');
+  const footerBorder = useColorModeValue('gray.200', 'gray.700');
+  const footerText = useColorModeValue('gray.600', 'gray.400');
+  const footerTextHover = useColorModeValue('gray.700', 'gray.300');
+  const popoverBorder = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
     const registerFrontend = async (): Promise<boolean> => {
@@ -72,16 +79,16 @@ const Layout: React.FC = () => {
       </Container>
       
       {/* Footer with version info */}
-      <Box data-testid="footer" role="contentinfo" as="footer" py={4} borderTop="1px" borderColor="gray.200" bg="gray.50">
+      <Box data-testid="footer" role="contentinfo" as="footer" py={4} borderTop="1px" borderColor={footerBorder} bg={footerBg}>
         <Container maxW="container.xl">
           <Flex justify="space-between" align="center">
-            <Text fontSize="sm" color="gray.600">
+            <Text fontSize="sm" color={footerText}>
               Figure Collector
             </Text>
             {versionInfo && (
               <Popover trigger="hover" placement="top-end">
                 <PopoverTrigger>
-                  <Text fontSize="xs" color="gray.500" cursor="pointer" _hover={{ color: "gray.700" }}>
+                  <Text fontSize="xs" color={footerText} cursor="pointer" _hover={{ color: footerTextHover }}>
                     v{versionInfo.application?.version || 'unknown'} • {versionInfo.application?.releaseDate || 'unknown'}
                   </Text>
                 </PopoverTrigger>
@@ -115,7 +122,7 @@ const Layout: React.FC = () => {
                       
                       {versionInfo.validation && (
                         <>
-                          <Box borderTop="1px" borderColor="gray.200" pt={2} mt={2}>
+                          <Box borderTop="1px" borderColor={popoverBorder} pt={2} mt={2}>
                             <HStack>
                               <Text fontSize="xs" fontWeight="semibold">Validation:</Text>
                               <Badge 

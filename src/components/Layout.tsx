@@ -89,8 +89,7 @@ const Layout: React.FC = () => {
               <Popover trigger="hover" placement="top-end">
                 <PopoverTrigger>
                   <Text fontSize="xs" color={footerText} cursor="pointer" _hover={{ color: footerTextHover }}>
-                    v{versionInfo.application?.version || 'unknown'}
-                    {versionInfo.application?.releaseDate && ` • ${versionInfo.application.releaseDate}`}
+                    v{versionInfo.application?.version || 'unknown'} • {versionInfo.application?.releaseDate || 'unknown'}
                   </Text>
                 </PopoverTrigger>
                 <PopoverContent width="auto" maxW="400px">
